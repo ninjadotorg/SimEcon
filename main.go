@@ -4,16 +4,16 @@ import (
 	"flag"
 	"log"
 
-	"github.com/0xroc/economy-simulation/sim"
+	"github.com/0xroc/economy-simulation/economy"
 )
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
-	file := flag.String("s", "", "simulation definition")
+	file := flag.String("f", "", "economy description file")
 	flag.Parse()
 
-	if e := sim.Start(*file); e != nil {
+	if e := economy.Run(*file); e != nil {
 		log.Println(e)
 	}
 }

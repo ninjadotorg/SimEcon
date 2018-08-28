@@ -1,12 +1,17 @@
 {
         "agents": [
                 {
-                        "type": "agent0",
+                        "action": "household.Greedy",
                         "qty": 2,
                         "stepSize": 1
                 },
                 {
-                        "type": "agent1",
+                        "action": "household.Modest",
+                        "qty": 2,
+                        "stepSize": 1
+                },
+                {
+                        "action": "firm.Store",
                         "qty": 1,
                         "stepSize": 5
                 }

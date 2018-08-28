@@ -1,14 +1,14 @@
-package uuid
+package util
 
 import (
 	"os/exec"
 	"strings"
 )
 
-func New() (string, error) {
+func NewUUID() string {
 	if o, e := exec.Command("uuidgen").Output(); e != nil {
-		return "", nil
+		return ""
 	} else {
-		return strings.Trim(string(o), "\n"), nil
+		return strings.Trim(string(o), "\n")
 	}
 }

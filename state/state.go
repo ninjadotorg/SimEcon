@@ -1,8 +1,8 @@
-package sim
+package state
 
 type State map[string]interface{}
 
-func state() State {
+func CurrentState() State {
 	s := State{}
 	s["price"] = 1
 	s["block"] = 1000
