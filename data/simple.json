@@ -1,0 +1,14 @@
+{
+        "agents": [
+                {
+                        "type": "agent0",
+                        "qty": 2,
+                        "stepSize": 1
+                },
+                {
+                        "type": "agent1",
+                        "qty": 1,
+                        "stepSize": 5
+                }
+        ]
+}
