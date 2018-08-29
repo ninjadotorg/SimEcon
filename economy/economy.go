@@ -5,8 +5,10 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/0xroc/economy-simulation/agent"
-	"github.com/0xroc/economy-simulation/state"
+	"github.com/ninjadotorg/economy-simulation/agent"
+	"github.com/ninjadotorg/economy-simulation/agent/firm"
+	"github.com/ninjadotorg/economy-simulation/agent/household"
+	"github.com/ninjadotorg/economy-simulation/state"
 )
 
 const (
@@ -26,12 +28,23 @@ func new(file string) (econ Economy, e error) {
 	}
 
 	for _, g := range econ.Groups {
-		agent := agent.New(g.Action, g.StepSize)
+		agent := agent.New(action(g.Action), g.StepSize)
 		for i := 0; i < g.Qty; i++ {
 			econ.agents = append(econ.agents, agent)
 		}
 	}
 	return
+}
+
+func action(name string) (action agent.Action) {
+	if name == "household.Greedy" {
+		action = &household.Greedy{}
+	} else if name == "household.Modest" {
+		action = &household.Modest{}
+	} else if name == "firm.Store" {
+		action = &firm.Store{}
+	}
+	return action
 }
 
 func Run(file string) (e error) {

@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/0xroc/economy-simulation/economy"
+	"github.com/ninjadotorg/economy-simulation/economy"
 )
 
 func main() {

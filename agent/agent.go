@@ -1,19 +1,34 @@
 package agent
 
 import (
-	"github.com/0xroc/economy-simulation/agent/firm"
-	"github.com/0xroc/economy-simulation/agent/household"
-	"github.com/0xroc/economy-simulation/state"
-	"github.com/0xroc/economy-simulation/util"
+	"github.com/ninjadotorg/economy-simulation/state"
+	"github.com/ninjadotorg/economy-simulation/util"
+)
+
+const (
+	CHANNEL_SIZE = 10
 )
 
 type Agent struct {
-	StepSize int
-	State    chan state.State
-	Quit     chan struct{}
+	StepSize  int
+	State     chan state.State
+	Quit      chan struct{}
+	action    Action
+	uuid      string
+	asset     Asset
+	liability Liability
+	state     int // state of an agent: running, paused
+}
 
-	uuid string
-	act  func(state.State)
+type Asset struct {
+	quantity []float64
+	price    []float64
+	cash     float64
+}
+
+type Liability struct {
+	equity float64
+	debt   float64
 }
 
 type Group struct {
@@ -22,27 +37,24 @@ type Group struct {
 	StepSize int    `json:"stepSize"`
 }
 
-func New(actionName string, stepSize int) (a Agent) {
+func New(action Action, stepSize int) (a Agent) {
 	a.uuid = util.NewUUID()
 	a.StepSize = stepSize
-	a.act = action(actionName)
-	a.State = make(chan state.State, 10)
-	return
-}
+	a.State = make(chan state.State, CHANNEL_SIZE)
 
-func action(name string) func(state.State) {
-	if name == "household.Greedy" {
-		return household.Greedy
-	} else if name == "household.Modest" {
-		return household.Modest
-	} else if name == "firm.Store" {
-		return firm.Store
-	}
-	return nil
+	a.action = action
+	a.action.Init(&a)
+
+	return
 }
 
 func (a *Agent) Run() {
 	for {
-		a.act(<-a.State)
+		select {
+		case state := <-a.State:
+			a.action.Run(a, state)
+		case <-a.Quit:
+			return
+		}
 	}
 }
