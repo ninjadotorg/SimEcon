@@ -4,11 +4,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"time"
-
-	"github.com/ninjadotorg/economy-simulation/agent"
-	"github.com/ninjadotorg/economy-simulation/agent/firm"
-	"github.com/ninjadotorg/economy-simulation/agent/household"
-	"github.com/ninjadotorg/economy-simulation/state"
 )
 
 const (
@@ -16,11 +11,12 @@ const (
 )
 
 type Economy struct {
-	Groups []agent.Group `json:"agents"`
-	agents []agent.Agent
+	Groups    []Group `json:"agents"`
+	agents    []Agent
+	contracts []Contract
 }
 
-func new(file string) (econ Economy, e error) {
+func newEconomy(file string) (econ Economy, e error) {
 	if f, e := ioutil.ReadFile(file); e != nil {
 		return econ, e
 	} else if e = json.Unmarshal(f, &econ); e != nil {
@@ -28,7 +24,7 @@ func new(file string) (econ Economy, e error) {
 	}
 
 	for _, g := range econ.Groups {
-		agent := agent.New(action(g.Action), g.StepSize)
+		agent := newAgent(action(g.Action), g.StepSize)
 		for i := 0; i < g.Qty; i++ {
 			econ.agents = append(econ.agents, agent)
 		}
@@ -36,33 +32,33 @@ func new(file string) (econ Economy, e error) {
 	return
 }
 
-func action(name string) (action agent.Action) {
+func action(name string) (action Action) {
 	if name == "household.Greedy" {
-		action = &household.Greedy{}
+		action = &Greedy{}
 	} else if name == "household.Modest" {
-		action = &household.Modest{}
+		action = &Modest{}
 	} else if name == "firm.Store" {
-		action = &firm.Store{}
+		action = &Restaurant{}
 	}
 	return action
 }
 
 func Run(file string) (e error) {
-	if econ, e := new(file); e != nil {
+	if econ, e := newEconomy(file); e != nil {
 		return e
 	} else {
 
 		// start all agents
 		for i, _ := range econ.agents {
-			go econ.agents[i].Run()
+			go econ.agents[i].run()
 		}
 
 		// broadcast state (loop)
 		for step := 0; ; step++ {
-			s := state.CurrentState()
+			s := currentState(econ)
 			for _, a := range econ.agents {
-				if step%a.StepSize == 0 {
-					a.State <- s
+				if step%a.stepSize == 0 {
+					a.state <- s
 				}
 			}
 			time.Sleep(INTERVAL)
