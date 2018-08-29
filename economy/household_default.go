@@ -18,7 +18,7 @@ func (d *Default) run(a *Agent, s State) {
 		// look for a job
 		for _, firm := range s.agents {
 			if firm.agentType == 1 {
-				a.initiate(firm, Contract{})
+				a.initiate(Contract{})
 			}
 		}
 	}

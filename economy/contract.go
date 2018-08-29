@@ -1,17 +1,18 @@
 package economy
 
 type Contract struct {
+	from   Agent
+	to     Agent
 	amt    float64
-	with   Agent
 	repeat int
 	give   int
 	take   int
 }
 
-func (a *Agent) initiate(with Agent, agmt Contract) {
-
+func (a *Agent) initiate(c Contract) {
+	c.to.pendingContracts <- c
 }
 
-func (a *Agent) handshake(with Agent, agmt Contract) {
-
+func (a *Agent) handshake(c Contract) {
+	c.from.pendingContracts <- c
 }

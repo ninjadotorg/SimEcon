@@ -1,6 +1,9 @@
 package economy
 
 import (
+	"log"
+	"math/rand"
+
 	"github.com/ninjadotorg/SimEcon/util"
 )
 
@@ -26,9 +29,10 @@ type Agent struct {
 	liability Liability
 
 	// communications
-	state    chan State
-	contract chan Contract
-	quit     chan struct{}
+	pendingContracts   chan Contract
+	completedContracts chan Contract
+	state              chan State
+	quit               chan struct{}
 }
 
 type Asset struct {
@@ -64,14 +68,20 @@ func (a *Agent) run() {
 		select {
 
 		case s := <-a.state:
+			// receive a (global) new network state update
 			a.action.run(a, s)
 
-			/*
-				case c := <-a.contract:
-					if rand.Intn(100) < PROBABILIY {
+		case c := <-a.pendingContracts:
+			// receive a (peer) contract from another agent
+			if rand.Intn(100) < PROBABILIY {
+				log.Println(c)
+			}
 
-					}
-			*/
+		case c := <-a.completedContracts:
+			// receive a (peer) contract from another agent
+			if rand.Intn(100) < PROBABILIY {
+				log.Println(c)
+			}
 
 		case <-a.quit:
 			return
