@@ -7,16 +7,15 @@ import (
 type Restaurant struct{}
 
 func (r *Restaurant) init(a *Agent) {
-	log.Println("init restaurant")
+	log.Println("init")
 }
 
-func (r *Restaurant) run(a *Agent, s State, econ Economy) {
+func (r *Restaurant) run(a *Agent, s State, econ *Economy) {
 }
 
-func (r *Restaurant) handleContract(a *Agent, c Contract, econ Economy) {
+func (r *Restaurant) handleContract(a *Agent, c Contract, econ *Economy) {
+	log.Println("HERE")
 }
 
-func (r *Restaurant) checkup(a *Agent, hour int, econ Economy) {
-	log.Println("i'm a restaurant")
-
+func (r *Restaurant) checkup(a *Agent, hour int, econ *Economy) {
 }

@@ -25,7 +25,7 @@ func newEconomy(file string) (econ Economy, e error) {
 	}
 
 	for _, g := range econ.Groups {
-		agent := newAgent(action(g.Action), g.StepSize)
+		agent := newAgent(g)
 		for i := 0; i < g.Qty; i++ {
 			econ.agents = append(econ.agents, agent)
 		}
@@ -36,12 +36,14 @@ func newEconomy(file string) (econ Economy, e error) {
 func action(name string) (action Action) {
 	if name == "household.default" {
 		action = &DefaultHousehold{}
-	} else if name == "firm.defaul" {
+	} else if name == "firm.default" {
 		action = &DefaultFirm{}
 	} else if name == "firm.restaurant" {
 		action = &Restaurant{}
+	} else if name == "network.contract" {
+		action = &ContractExecutor{}
 	}
-	return action
+	return
 }
 
 func Run(file string) (e error) {
@@ -53,7 +55,7 @@ func Run(file string) (e error) {
 
 	// start all agents in separate goroutines
 	for i, _ := range econ.agents {
-		go econ.agents[i].run(econ)
+		go econ.agents[i].run(&econ)
 	}
 
 	// broadcast state (loop)
@@ -68,12 +70,12 @@ func Run(file string) (e error) {
 	// }
 
 	// clock broadcast hourly
-	// for hour := 0; ; hour++ {
-	// 	for _, a := range econ.agents {
-	// 		a.hour <- hour
-	// 	}
-	// 	time.Sleep(AN_HOUR)
-	// }
+	for hour := 0; ; hour++ {
+		for i, _ := range econ.agents {
+			econ.agents[i].hour <- hour
+		}
+		time.Sleep(AN_HOUR)
+	}
 
 	// order book approach
 

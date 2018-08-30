@@ -1,6 +1,8 @@
 package economy
 
 import (
+	"log"
+
 	"github.com/ninjadotorg/SimEcon/util"
 )
 
@@ -10,14 +12,14 @@ const (
 	HOUR_CHANNEL_SIZE     = 10
 )
 
+type Group struct {
+	Behavior string `json:"behavior"`
+	Qty      int    `json:"qty"`
+	StepSize int    `json:"stepSize"`
+}
+
 type Agent struct {
-
-	// 0: household (default)
-	// 1: firm
-	// 2: bank
-	// 3: central bank
-	agentType int
-
+	behavior string
 	stepSize int
 	action   Action
 	uuid     string
@@ -44,39 +46,38 @@ type Liability struct {
 	debt   float64
 }
 
-type Group struct {
-	Action   string `json:"action"`
-	Qty      int    `json:"qty"`
-	StepSize int    `json:"stepSize"`
-}
-
-func newAgent(action Action, stepSize int) (a Agent) {
+func newAgent(g Group) (a Agent) {
 	a.uuid = util.NewUUID()
-	a.stepSize = stepSize
+	a.stepSize = g.StepSize
+
 	a.macro = make(chan State, STATE_CHANNEL_SIZE)
 	a.contract = make(chan Contract, CONTRACT_CHANNEL_SIZE)
 	a.hour = make(chan int, HOUR_CHANNEL_SIZE)
 
-	a.action = action
+	a.action = action(g.Behavior)
+	a.behavior = g.Behavior
 	a.action.init(&a)
 
 	return
 }
 
-func (a *Agent) run(econ Economy) {
+func (a *Agent) run(econ *Economy) {
 	for {
 		select {
 
+		case c := <-a.contract:
+			log.Println("new contract", a.behavior, util.Shorten(a.uuid))
+			a.action.handleContract(a, c, econ)
+
 		case h := <-a.hour:
-			// receive a (global) new network state update
+			// receive a clock reminder
+			log.Println("new hourly checkup", a.behavior, util.Shorten(a.uuid))
 			a.action.checkup(a, h, econ)
 
 		case s := <-a.macro:
 			// receive a (global) new network state update
+			log.Println("new macro state", a.behavior, util.Shorten(a.uuid))
 			a.action.run(a, s, econ)
-
-		case c := <-a.contract:
-			a.action.handleContract(a, c, econ)
 
 		case <-a.quit:
 			return

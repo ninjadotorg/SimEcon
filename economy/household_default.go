@@ -3,6 +3,8 @@ package economy
 import (
 	"log"
 	"math/rand"
+
+	"github.com/ninjadotorg/SimEcon/util"
 )
 
 const (
@@ -15,37 +17,46 @@ type DefaultHousehold struct {
 }
 
 func (d *DefaultHousehold) init(a *Agent) {
-	log.Println("init default household agent")
+	log.Println("init")
+	d.salary = 1
 }
 
-func (d *DefaultHousehold) run(a *Agent, s State, econ Economy) {
+func (d *DefaultHousehold) run(a *Agent, s State, econ *Economy) {
 }
 
-func (d *DefaultHousehold) handleContract(a *Agent, c Contract, econ Economy) {
-	if c.status == 1 && c.to == a {
-		c.status = 2
-		a.handshake(c)
-		econ.contracts = append(econ.contracts, c)
-	} else if c.status == 2 && c.contractType == 1 {
+func (d *DefaultHousehold) handleContract(a *Agent, c Contract, econ *Economy) {
+	if c.status == 2 && c.contractType == 1 {
 		// employment contract
+		log.Println("got a job")
 		d.employed = 2
 	}
 }
 
-func (d *DefaultHousehold) checkup(a *Agent, hour int, econ Economy) {
-	log.Println("i'm a default household agent")
+func (d *DefaultHousehold) checkup(a *Agent, hour int, econ *Economy) {
 	if d.employed == 0 {
-		// look for a job
+
 		for {
-			firm := econ.agents[rand.Intn(len(econ.agents))]
-			if firm.agentType == 1 {
+
+			firm := &econ.agents[rand.Intn(len(econ.agents))]
+
+			if firm.behavior == "firm.default" {
+				log.Println("looking for a job at", util.Shorten(firm.uuid))
 				d.employed = 1
+
 				c := Contract{}
 				c.from = a
-				c.to = &firm
+				c.to = firm
+				c.payer = firm
+				c.payee = a
+
+				c.contractType = 1 // employment
+
+				c.status = 1
 				c.amt = d.salary
-				c.repeat = MONTHLY
+				c.repeat = 1
+
 				a.initiate(c)
+
 				break
 			}
 		}

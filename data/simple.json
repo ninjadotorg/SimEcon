@@ -1,19 +1,24 @@
 {
         "agents": [
                 {
-                        "action": "household.default",
-                        "qty": 2,
-                        "stepSize": 1
-                },
-                {
-                        "action": "firm.default",
+                        "behavior": "household.default",
                         "qty": 1,
                         "stepSize": 1
                 },
                 {
-                        "action": "firm.restaurant",
+                        "behavior": "firm.default",
                         "qty": 1,
-                        "stepSize": 5
+                        "stepSize": 1
+                },
+                {
+                        "behavior": "firm.restaurant",
+                        "qty": 1,
+                        "stepSize": 1
+                },
+                {
+                        "behavior": "network.contract",
+                        "qty": 1,
+                        "stepSize": 1
                 }
         ]
 }

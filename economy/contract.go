@@ -3,6 +3,8 @@ package economy
 type Contract struct {
 	from         *Agent
 	to           *Agent
+	payer        *Agent
+	payee        *Agent
 	amt          float64
 	repeat       int
 	give         int

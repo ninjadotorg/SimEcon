@@ -12,3 +12,7 @@ func NewUUID() string {
 		return strings.Trim(string(o), "\n")
 	}
 }
+
+func Shorten(uuid string) string {
+	return "#" + uuid[:4]
+}
