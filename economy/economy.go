@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	AN_HOUR  = 1 * time.Second // reduce 1h to 1s
 	INTERVAL = 1 * time.Second
 )
 
@@ -33,35 +34,47 @@ func newEconomy(file string) (econ Economy, e error) {
 }
 
 func action(name string) (action Action) {
-	if name == "household.Greedy" {
-		action = &Greedy{}
-	} else if name == "household.Modest" {
-		action = &Modest{}
-	} else if name == "firm.Store" {
+	if name == "household.default" {
+		action = &DefaultHousehold{}
+	} else if name == "firm.defaul" {
+		action = &DefaultFirm{}
+	} else if name == "firm.restaurant" {
 		action = &Restaurant{}
 	}
 	return action
 }
 
 func Run(file string) (e error) {
-	if econ, e := newEconomy(file); e != nil {
+
+	var econ Economy
+	if econ, e = newEconomy(file); e != nil {
 		return e
-	} else {
-
-		// start all agents
-		for i, _ := range econ.agents {
-			go econ.agents[i].run()
-		}
-
-		// broadcast state (loop)
-		for step := 0; ; step++ {
-			s := currentState(econ)
-			for _, a := range econ.agents {
-				if step%a.stepSize == 0 {
-					a.state <- s
-				}
-			}
-			time.Sleep(INTERVAL)
-		}
 	}
+
+	// start all agents in separate goroutines
+	for i, _ := range econ.agents {
+		go econ.agents[i].run(econ)
+	}
+
+	// broadcast state (loop)
+	// for step := 0; ; step++ {
+	// 	s := currentState(econ)
+	// 	for _, a := range econ.agents {
+	// 		if step%a.stepSize == 0 {
+	// 			a.macro <- s
+	// 		}
+	// 	}
+	// 	time.Sleep(INTERVAL)
+	// }
+
+	// clock broadcast hourly
+	// for hour := 0; ; hour++ {
+	// 	for _, a := range econ.agents {
+	// 		a.hour <- hour
+	// 	}
+	// 	time.Sleep(AN_HOUR)
+	// }
+
+	// order book approach
+
 }

@@ -1,15 +1,13 @@
 package economy
 
 import (
-	"log"
-	"math/rand"
-
 	"github.com/ninjadotorg/SimEcon/util"
 )
 
 const (
-	CHANNEL_SIZE = 10
-	PROBABILIY   = 80
+	STATE_CHANNEL_SIZE    = 10
+	CONTRACT_CHANNEL_SIZE = 10
+	HOUR_CHANNEL_SIZE     = 10
 )
 
 type Agent struct {
@@ -29,10 +27,10 @@ type Agent struct {
 	liability Liability
 
 	// communications
-	pendingContracts   chan Contract
-	completedContracts chan Contract
-	state              chan State
-	quit               chan struct{}
+	contract chan Contract
+	macro    chan State
+	hour     chan int
+	quit     chan struct{}
 }
 
 type Asset struct {
@@ -55,7 +53,9 @@ type Group struct {
 func newAgent(action Action, stepSize int) (a Agent) {
 	a.uuid = util.NewUUID()
 	a.stepSize = stepSize
-	a.state = make(chan State, CHANNEL_SIZE)
+	a.macro = make(chan State, STATE_CHANNEL_SIZE)
+	a.contract = make(chan Contract, CONTRACT_CHANNEL_SIZE)
+	a.hour = make(chan int, HOUR_CHANNEL_SIZE)
 
 	a.action = action
 	a.action.init(&a)
@@ -63,25 +63,20 @@ func newAgent(action Action, stepSize int) (a Agent) {
 	return
 }
 
-func (a *Agent) run() {
+func (a *Agent) run(econ Economy) {
 	for {
 		select {
 
-		case s := <-a.state:
+		case h := <-a.hour:
 			// receive a (global) new network state update
-			a.action.run(a, s)
+			a.action.checkup(a, h, econ)
 
-		case c := <-a.pendingContracts:
-			// receive a (peer) contract from another agent
-			if rand.Intn(100) < PROBABILIY {
-				log.Println(c)
-			}
+		case s := <-a.macro:
+			// receive a (global) new network state update
+			a.action.run(a, s, econ)
 
-		case c := <-a.completedContracts:
-			// receive a (peer) contract from another agent
-			if rand.Intn(100) < PROBABILIY {
-				log.Println(c)
-			}
+		case c := <-a.contract:
+			a.action.handleContract(a, c, econ)
 
 		case <-a.quit:
 			return

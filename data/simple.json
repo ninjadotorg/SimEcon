@@ -1,17 +1,17 @@
 {
         "agents": [
                 {
-                        "action": "household.Greedy",
+                        "action": "household.default",
                         "qty": 2,
                         "stepSize": 1
                 },
                 {
-                        "action": "household.Modest",
-                        "qty": 2,
+                        "action": "firm.default",
+                        "qty": 1,
                         "stepSize": 1
                 },
                 {
-                        "action": "firm.Store",
+                        "action": "firm.restaurant",
                         "qty": 1,
                         "stepSize": 5
                 }
