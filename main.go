@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	log.SetFlags(log.Ltime | log.Lshortfile)
 
 	file := flag.String("f", "", "economy description file")
 	flag.Parse()

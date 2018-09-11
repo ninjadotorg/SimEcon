@@ -1,6 +1,7 @@
 package economy
 
 import (
+	"errors"
 	"log"
 
 	"github.com/ninjadotorg/SimEcon/util"
@@ -12,72 +13,72 @@ const (
 	HOUR_CHANNEL_SIZE     = 10
 )
 
-type Group struct {
-	Behavior string `json:"behavior"`
-	Qty      int    `json:"qty"`
-	StepSize int    `json:"stepSize"`
-}
-
 type Agent struct {
-	behavior string
-	stepSize int
-	action   Action
-	uuid     string
+	agentType string
+	policy    Policy
+	uuid      string
+	buyAsset  Asset
+	sellAsset Asset
+	cash      float64
+	econ      *Economy
 
-	// balance sheet
-	asset     Asset
-	liability Liability
-
-	// communications
-	contract chan Contract
-	macro    chan State
-	hour     chan int
-	quit     chan struct{}
+	Communications
 }
 
 type Asset struct {
-	quantity []float64
-	price    []float64
-	cash     float64
+	assetType   AssetType
+	targetPrice float64
+	inventory   int
 }
 
-type Liability struct {
-	equity float64
-	debt   float64
+type Communications struct {
+	tick     chan int      // the smallest unit of time in this economy
+	contract chan Contract // p2p direct contract w/ another agent
+	macro    chan State    // network state broadcased to all agents by the network
+	quit     chan struct{}
 }
 
-func newAgent(g Group) (a Agent) {
+// type BalanceSheet struct {
+
+// 	// assets
+// 	quantity []float64
+// 	price    []float64
+// 	cash     float64
+
+// 	// liabilities
+// 	equity float64
+// 	debt   float64
+// }
+
+func newAgent(s AgentSpecs, econ *Economy) (a Agent) {
 	a.uuid = util.NewUUID()
-	a.stepSize = g.StepSize
 
 	a.macro = make(chan State, STATE_CHANNEL_SIZE)
 	a.contract = make(chan Contract, CONTRACT_CHANNEL_SIZE)
-	a.hour = make(chan int, HOUR_CHANNEL_SIZE)
+	a.tick = make(chan int, HOUR_CHANNEL_SIZE)
 
-	a.action = action(g.Behavior)
-	a.behavior = g.Behavior
-	a.action.init(&a)
+	a.agentType = s.AgentType
+	a.policy = policy(s.AgentType)
+	a.econ = econ
 
 	return
 }
 
-func (a *Agent) run(econ *Economy) {
+func (a *Agent) run() {
 	for {
 		select {
 
-		case c := <-a.contract:
-			log.Println("new contract", a.behavior, util.Shorten(a.uuid))
-			a.action.handleContract(a, c, econ)
+		case tick := <-a.tick:
+			log.Println("new tick", a.agentType, util.Shorten(a.uuid))
+			a.policy.onTick(a, tick)
 
-		case h := <-a.hour:
-			// receive a clock reminder
-			log.Println("new hourly checkup", a.behavior, util.Shorten(a.uuid))
-			a.action.checkup(a, h, econ)
+		// case contract := <-agent.contract:
+		// 	log.Println("new contract", agent.agentType, util.Shorten(agent.uuid))
+		// 	agent.policy.onContract(agent, contract, econ)
 
-		case s := <-a.macro:
-			// receive a (global) new network state update
-			log.Println("new macro state", a.behavior, util.Shorten(a.uuid))
-			a.action.run(a, s, econ)
+		// case macro := <-a.macro:
+		// 	log.Println("new macro state", a.agentType, util.Shorten(a.uuid))
+		// 	a.policy.run(agent, macro, econ)
 
 		case <-a.quit:
 			return
@@ -85,4 +86,22 @@ func (a *Agent) run(econ *Economy) {
 		}
 
 	}
+}
+
+func (a *Agent) buy(size float64, price float64) error {
+	if size*price > a.cash {
+		return errors.New("not enough cash")
+	}
+	m := a.econ.markets[a.buyAsset.assetType]
+	m.trade("buy", size, price, a.uuid)
+	return nil
+}
+
+func (a *Agent) sell(size float64, price float64) {
+	m := a.econ.markets[a.sellAsset.assetType]
+	m.trade("sell", size, price, a.uuid)
+}
+
+func (a *Agent) produce() {
+	a.policy.produce(a)
 }

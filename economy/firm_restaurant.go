@@ -1,21 +1,13 @@
 package economy
 
-import (
-	"log"
-)
-
 type Restaurant struct{}
 
-func (r *Restaurant) init(a *Agent) {
-	log.Println("init")
+func (r *Restaurant) onContract(a *Agent, c Contract) {
 }
 
-func (r *Restaurant) run(a *Agent, s State, econ *Economy) {
+func (r *Restaurant) onTick(a *Agent, tick int) {
 }
 
-func (r *Restaurant) handleContract(a *Agent, c Contract, econ *Economy) {
-	log.Println("HERE")
-}
+func (r *Restaurant) produce(a *Agent) {
 
-func (r *Restaurant) checkup(a *Agent, hour int, econ *Economy) {
 }

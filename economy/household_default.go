@@ -16,15 +16,7 @@ type DefaultHousehold struct {
 	salary   float64
 }
 
-func (d *DefaultHousehold) init(a *Agent) {
-	log.Println("init")
-	d.salary = 1
-}
-
-func (d *DefaultHousehold) run(a *Agent, s State, econ *Economy) {
-}
-
-func (d *DefaultHousehold) handleContract(a *Agent, c Contract, econ *Economy) {
+func (d *DefaultHousehold) onContract(a *Agent, c Contract) {
 	if c.status == 2 && c.contractType == 1 {
 		// employment contract
 		log.Println("got a job")
@@ -32,14 +24,14 @@ func (d *DefaultHousehold) handleContract(a *Agent, c Contract, econ *Economy) {
 	}
 }
 
-func (d *DefaultHousehold) checkup(a *Agent, hour int, econ *Economy) {
+func (d *DefaultHousehold) onTick(a *Agent, hour int) {
 	if d.employed == 0 {
 
 		for {
 
-			firm := &econ.agents[rand.Intn(len(econ.agents))]
+			firm := &a.econ.agents[rand.Intn(len(a.econ.agents))]
 
-			if firm.behavior == "firm.default" {
+			if firm.agentType == "firm.default" {
 				log.Println("looking for a job at", util.Shorten(firm.uuid))
 				d.employed = 1
 
@@ -61,4 +53,8 @@ func (d *DefaultHousehold) checkup(a *Agent, hour int, econ *Economy) {
 			}
 		}
 	}
+}
+
+func (d *DefaultHousehold) produce(a *Agent) {
+
 }

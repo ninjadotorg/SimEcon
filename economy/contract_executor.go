@@ -11,27 +11,25 @@ type ContractExecutor struct {
 	salary   float64
 }
 
-func (d *ContractExecutor) init(a *Agent) {
+func (d *ContractExecutor) onContract(a *Agent, c Contract) {
 }
 
-func (d *ContractExecutor) run(a *Agent, s State, econ *Economy) {
-}
-
-func (d *ContractExecutor) handleContract(a *Agent, c Contract, econ *Economy) {
-}
-
-func (d *ContractExecutor) checkup(a *Agent, hour int, econ *Economy) {
+func (d *ContractExecutor) onTick(a *Agent, tick int) {
 
 	// executing contract
-	for _, c := range econ.contracts {
-		if hour%c.repeat == 0 {
-			c.payer.asset.cash -= c.amt
-			c.payee.asset.cash += c.amt
+	for _, c := range a.econ.contracts {
+		if tick%c.repeat == 0 {
+			c.payer.cash -= c.amt
+			c.payee.cash += c.amt
 		}
 	}
 
 	// print agent balances
-	for _, a := range econ.agents {
-		log.Println(util.Shorten(a.uuid), a.behavior, a.asset.cash)
+	for _, a := range a.econ.agents {
+		log.Println(util.Shorten(a.uuid), a.agentType, a.cash)
 	}
+}
+
+func (d *ContractExecutor) produce(a *Agent) {
+
 }
