@@ -22,11 +22,5 @@ func newEconomy(file string) (econ Economy, e error) {
 		return econ, e
 	}
 
-	for _, g := range specs.Agents {
-		agent := newAgent(g, &econ)
-		for i := 0; i < g.Qty; i++ {
-			econ.agents = append(econ.agents, agent)
-		}
-	}
 	return
 }

@@ -1,50 +1,40 @@
 package economy
 
 import (
-	"time"
-)
+	"fmt"
+	"net/http"
 
-const (
-	TICK = time.Second
+	"github.com/gorilla/mux"
 )
-
-type AssetType string
 
 type Economy struct {
-	markets   map[AssetType]Market
-	agents    []Agent
-	contracts []Contract
+	markets map[string]Market // map[asset]market
+	agents  []Agent
+}
+
+func (econ *Economy) addAgent(agentType string) (agentId int) {
+	agentId = len(econ.agents)
+	econ.agents = append(econ.agents, Agent{agentType: agentType})
+	return
 }
 
 func Run(file string) (e error) {
+	r := mux.NewRouter()
+	r.HandleFunc("/", homeHandler)
+	r.HandleFunc("/agents/add", homeHandler)
+	http.ListenAndServe(":8080", r)
+	return
+}
 
-	var econ Economy
-	if econ, e = newEconomy(file); e != nil {
-		return e
-	}
+func newAgent(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Hello World", vars)
 
-	// start all agents in separate goroutines
-	for i, _ := range econ.agents {
-		go econ.agents[i].run()
-	}
-
-	// clock tick
-	for tick := 0; ; tick++ {
-		for i, _ := range econ.agents {
-			econ.agents[i].tick <- tick
-		}
-		time.Sleep(TICK)
-	}
-
-	// broadcast state (loop)
-	// for step := 0; ; step++ {
-	// 	s := currentState(econ)
-	// 	for _, a := range econ.agents {
-	// 		if step%a.stepSize == 0 {
-	// 			a.macro <- s
-	// 		}
-	// 	}
-	// 	time.Sleep(INTERVAL)
-	// }
+}
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Hello World", vars)
 
 }

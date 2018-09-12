@@ -12,6 +12,5 @@ func currentState(econ Economy) State {
 	s := State{}
 	s.price = 1
 	s.block = 1000
-	s.agents = econ.agents
 	return s
 }

@@ -2,28 +2,24 @@ package economy
 
 import "math"
 
-const (
-	LABOR_MARKET = "LABOR_MARKET"
-)
-
 type Market struct {
 	openBuy  []Order
 	openSell []Order
 }
 
 type Order struct {
-	size   float64
-	price  float64
-	from   string
-	filled float64
-	status string
+	size    float64
+	price   float64
+	agentId string
+	filled  float64
+	status  string
 }
 
-func (m *Market) trade(side string, size float64, price float64, from string) {
+func (m *Market) trade(side string, size float64, price float64, agentId string) {
 	o := Order{}
 	o.size = size
 	o.price = price
-	o.from = from
+	o.agentId = agentId
 	if side == "buy" {
 		m.openBuy = append(m.openBuy, o)
 	} else if side == "sell" {
@@ -31,7 +27,7 @@ func (m *Market) trade(side string, size float64, price float64, from string) {
 	}
 }
 
-func (m *Market) buy(size float64, price float64, from string) {
+func (m *Market) buy(size float64, price float64, agentId string) {
 	for {
 		best := m.bestAsk()
 		for _, order := range m.openSell {

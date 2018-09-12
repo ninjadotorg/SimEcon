@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"log"
 
 	"github.com/ninjadotorg/SimEcon/economy"
@@ -10,10 +9,12 @@ import (
 func main() {
 	log.SetFlags(log.Ltime | log.Lshortfile)
 
-	file := flag.String("f", "", "economy description file")
-	flag.Parse()
+	// file := flag.String("f", "", "economy description file")
+	// flag.Parse()
 
-	if e := economy.Run(*file); e != nil {
-		log.Println(e)
-	}
+	// if e := economy.Run(*file); e != nil {
+	// 	log.Println(e)
+	// }
+
+	economy.Run("abc")
 }
