@@ -3,7 +3,7 @@ package economy
 //type State map[string]interface{}
 
 type State struct {
-	price  float64
+	price  float32
 	block  int
 	agents []Agent
 }

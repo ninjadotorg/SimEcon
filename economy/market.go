@@ -1,60 +1,72 @@
 package economy
 
-import "math"
-
 type Market struct {
-	openBuy  []Order
-	openSell []Order
+	asks []Price
+	bids []Price
+}
+
+type Price struct {
+	price  float32
+	orders []Order
 }
 
 type Order struct {
-	size    float64
-	price   float64
+	size    float32
 	agentId string
-	filled  float64
-	status  string
+	// price   float32
+	// filled  float32
+	// status  string
 }
 
-func (m *Market) trade(side string, size float64, price float64, agentId string) {
-	o := Order{}
-	o.size = size
-	o.price = price
-	o.agentId = agentId
-	if side == "buy" {
-		m.openBuy = append(m.openBuy, o)
-	} else if side == "sell" {
-		m.openSell = append(m.openSell, o)
+func (m *Market) trade(side string, size float32, price float32, agentId string) {
+}
+
+// markets/{MARKET_ID}/buyLimit?size=&price=&agentId=
+func (m *Market) buyLimit(size float32, price float32, agentId string) {
+	i, new := findPosition(price, m.bids)
+	if new {
+		m.bids = insertPosition(i, price, m.bids)
 	}
+	m.bids[i].orders = append(m.bids[i].orders, Order{size, agentId})
 }
 
-func (m *Market) buy(size float64, price float64, agentId string) {
-	for {
-		best := m.bestAsk()
-		for _, order := range m.openSell {
-			if order.price == best {
+// markets/{MARKET_ID}/sellLimit?size=&price=&agentId=
+func (m *Market) sellLimit(size float32, price float32, agentId string) {
+	i, new := findPosition(price, m.asks)
+	if new {
+		insertPosition(i, price, m.asks)
+	}
+	m.asks[i].orders = append(m.asks[i].orders, Order{size, agentId})
+}
 
-			}
+func findPosition(price float32, prices []Price) (position int, new bool) {
+	for i := 0; i < len(prices); i++ {
+		if prices[i].price <= price {
+			return i, prices[i].price != price
 		}
 	}
+	return len(prices), true
+}
+
+func insertPosition(position int, price float32, prices []Price) []Price {
+	prices = prices[:len(prices)+1]
+	copy(prices[position+1:], prices[position:])
+	prices[position] = Price{price: price}
+	return prices
+}
+
+func (m *Market) buyMarket(size float32, price float32, agentId string) {
 
 }
 
-func (m *Market) bestAsk() (best float64) {
-	best = math.MaxFloat64
-	for _, order := range m.openSell {
-		if order.price < best {
-			best = order.price
-		}
-	}
-	return
+func (m *Market) sellMarket(size float32, price float32, agentId string) {
+
 }
 
-func (m *Market) bestBid() (best float64) {
-	best = -math.MaxFloat64
-	for _, order := range m.openBuy {
-		if order.price > best {
-			best = order.price
-		}
-	}
-	return
+func (m *Market) bestAsk() float32 {
+	return m.asks[0].price
+}
+
+func (m *Market) bestBid() float32 {
+	return m.bids[0].price
 }
