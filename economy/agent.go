@@ -10,14 +10,14 @@ import (
 
 type Agent struct {
 	Type    string             `json:"type"`
-	Balance map[string]float32 `json:"balance"`
+	Balance map[string]float64 `json:"balance"`
 }
 
 // agents/{AGENT_ID}/join?type=
 func join(w http.ResponseWriter, r *http.Request) {
 	econ.agent[mux.Vars(r)["AGENT_ID"]] = &Agent{
 		Type:    r.URL.Query().Get("type"),
-		Balance: make(map[string]float32),
+		Balance: make(map[string]float64),
 	}
 }
 

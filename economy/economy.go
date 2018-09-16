@@ -36,8 +36,10 @@ func Run(file string) {
 	r.HandleFunc("/agents/{AGENT_ID}/assets", agentAssets)
 	r.HandleFunc("/agents/{AGENT_ID}/assets/{ASSET_ID}", agentAssetBalance)
 
-	r.HandleFunc("/markets/{ASSET_ID}", agent)
-	r.HandleFunc("/markets/{ASSET_ID}/trade", agent)
+	r.HandleFunc("/markets/{ASSET_ID}/buy", buy)
+	r.HandleFunc("/markets/{ASSET_ID}/sell", sell)
+	r.HandleFunc("/markets/{ASSET_ID}/buyLimit", buyLimit)
+	r.HandleFunc("/markets/{ASSET_ID}/sellLimit", sellLimit)
 
 	http.ListenAndServe(":8080", r)
 }

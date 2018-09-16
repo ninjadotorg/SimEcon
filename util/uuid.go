@@ -16,3 +16,11 @@ func NewUUID() string {
 func Shorten(uuid string) string {
 	return "#" + uuid[:4]
 }
+
+func Btoi(b bool) int {
+	if b {
+		return 1
+	} else {
+		return 0
+	}
+}
