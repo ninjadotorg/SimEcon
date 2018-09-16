@@ -23,7 +23,7 @@ type Order struct {
 	agentId string
 }
 
-// markets/{ASSET_ID}/buyLimit?size=&price=&agentId=
+// market/{ASSET_ID}/buyLimit?size=&price=&agentId=
 func buyLimit(w http.ResponseWriter, r *http.Request) {
 	m := econ.market[mux.Vars(r)["ASSET_ID"]]
 	q := r.URL.Query()
@@ -34,7 +34,7 @@ func buyLimit(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// markets/{ASSET_ID}/sellLimit?size=&price=&agentId=
+// market/{ASSET_ID}/sellLimit?size=&price=&agentId=
 func sellLimit(w http.ResponseWriter, r *http.Request) {
 	m := econ.market[mux.Vars(r)["ASSET_ID"]]
 	q := r.URL.Query()
@@ -45,7 +45,7 @@ func sellLimit(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// markets/{ASSET_ID}/buy?amount=&agentId=
+// market/{ASSET_ID}/buy?amount=&agentId=
 func buy(w http.ResponseWriter, r *http.Request) {
 	m := econ.market[mux.Vars(r)["ASSET_ID"]]
 	q := r.URL.Query()
@@ -54,7 +54,7 @@ func buy(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// markets/{ASSET_ID}/sell?amount=&agentId=
+// market/{ASSET_ID}/sell?amount=&agentId=
 func sell(w http.ResponseWriter, r *http.Request) {
 	m := econ.market[mux.Vars(r)["ASSET_ID"]]
 	q := r.URL.Query()
