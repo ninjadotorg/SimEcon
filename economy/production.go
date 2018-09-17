@@ -10,6 +10,7 @@ package economy
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -33,8 +34,8 @@ func production(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// production/add?function=&input=&output=&
-func addProduction(w http.ResponseWriter, r *http.Request) {
+// production/{PRODUCTION_ID}/new?function=&input=&output=&
+func newProduction(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	p := Production{Function: q.Get("function")}
 	json.Unmarshal([]byte(q.Get("input")), &p.Input)
@@ -49,7 +50,17 @@ func (p *Production) produce(input map[string]float64, agent *Agent) {
 	}
 
 	// calc output
-	log.Println("Calling endpoint", p.Function, "with ", input)
+	url := p.Function
+	if js, e := json.Marshal(input); e != nil {
+		return
+	} else {
+		url += "?input=" + string(js)
+	}
+	log.Println("REQUEST", url)
+	res, _ := http.Get(url)
+	data, _ := ioutil.ReadAll(res.Body)
+	log.Println("RESPONSE", string(data))
+
 	var output map[string]float64
 
 	// validate output

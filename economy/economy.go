@@ -36,13 +36,15 @@ func Run(file string) {
 	r.HandleFunc("/agent/{AGENT_ID}/asset/all", agentAllAssets)
 	r.HandleFunc("/agent/{AGENT_ID}/asset/{ASSET_ID}", agentAsset)
 
+	r.HandleFunc("/market/{ASSET_ID}", market)
+	r.HandleFunc("/market/{ASSET_ID}/new", newMarket)
 	r.HandleFunc("/market/{ASSET_ID}/buy", buy)
 	r.HandleFunc("/market/{ASSET_ID}/sell", sell)
 	r.HandleFunc("/market/{ASSET_ID}/buyLimit", buyLimit)
 	r.HandleFunc("/market/{ASSET_ID}/sellLimit", sellLimit)
 
-	r.HandleFunc("/production/add", addProduction)
 	r.HandleFunc("/production/{PRODUCTION_ID}", production)
+	r.HandleFunc("/production/{PRODUCTION_ID}/new", newProduction)
 
 	http.ListenAndServe(":8080", r)
 }

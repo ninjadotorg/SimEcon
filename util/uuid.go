@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func NewUUID() string {
+func UUID() string {
 	if o, e := exec.Command("uuidgen").Output(); e != nil {
 		return ""
 	} else {
