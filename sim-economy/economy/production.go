@@ -9,9 +9,11 @@ package economy
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"time"
 
@@ -19,7 +21,8 @@ import (
 )
 
 type Production struct {
-	Function string             `json:"function"` // end point to function
+	Type     string             `json:"type"`     // default or custom
+	Function string             `json:"function"` // custom endpoint
 	Time     int                `json:"time"`     // how long it takes to produce
 	Input    map[string]float64 `json:"input"`    // []map(asset_id)size
 	Output   map[string]float64 `json:"output"`   // []map(asset_id)size
@@ -35,7 +38,7 @@ func production(w http.ResponseWriter, r *http.Request) {
 }
 
 // production/{PRODUCTION_ID}/new?function=&input=&output=&
-func newProduction(w http.ResponseWriter, r *http.Request) {
+func productionNew(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	p := Production{Function: q.Get("function")}
 	json.Unmarshal([]byte(q.Get("input")), &p.Input)
@@ -43,41 +46,62 @@ func newProduction(w http.ResponseWriter, r *http.Request) {
 	econ.production[mux.Vars(r)["PRODUCTION_ID"]] = &p
 }
 
-func (p *Production) produce(input map[string]float64, agent *Agent) {
-	// validate input
+func (p *Production) produce(input map[string]float64, agent *Agent) error {
+
+	log.Println("validate input")
 	if !sameKeys(input, p.Input) {
-		return
+		return errors.New("mismatched input")
 	}
 
-	// calc output
-	url := p.Function
-	if js, e := json.Marshal(input); e != nil {
-		return
-	} else {
-		url += "?input=" + string(js)
+	log.Println("calculate output")
+	output := make(map[string]float64)
+
+	if p.Type == "default" {
+		// simply map x to y linearly
+		min := math.MaxFloat64
+		for k, v := range p.Input {
+			r := input[k] / v
+			if r < min {
+				min = r
+			}
+		}
+		for k, v := range p.Output {
+			output[k] = v * min
+		}
+	} else if p.Type == "custom" {
+		// call external endpoint
+		url := p.Function
+		if js, e := json.Marshal(input); e != nil {
+			return e
+		} else {
+			url += "?input=" + string(js)
+		}
+
+		res, _ := http.Get(url)
+		data, _ := ioutil.ReadAll(res.Body)
+
+		json.Unmarshal([]byte(string(data)), &output)
 	}
-	log.Println("REQUEST", url)
-	res, _ := http.Get(url)
-	data, _ := ioutil.ReadAll(res.Body)
-	log.Println("RESPONSE", string(data))
 
-	var output map[string]float64
-
-	// validate output
+	log.Println("validate output")
 	if !sameKeys(output, p.Output) {
-		return
+		return errors.New("mismatched output")
 	}
 
-	// producing...
+	log.Println("producing")
 	time.Sleep(time.Second * time.Duration(p.Time))
 
-	// minus input, add output
+	log.Println("update asset balance.. remove input")
 	for k, v := range input {
 		agent.Balance[k] -= v
 	}
+
+	log.Println("update asset balance.. add output")
 	for k, v := range output {
 		agent.Balance[k] += v
 	}
+
+	return nil
 }
 
 func sameKeys(a, b map[string]float64) bool {

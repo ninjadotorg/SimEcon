@@ -26,7 +26,7 @@ type Order struct {
 }
 
 // market/{ASSET_ID}/new
-func newMarket(w http.ResponseWriter, r *http.Request) {
+func marketNew(w http.ResponseWriter, r *http.Request) {
 	econ.market[mux.Vars(r)["ASSET_ID"]] = &Market{}
 }
 
@@ -39,8 +39,8 @@ func market(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// market/{ASSET_ID}/buyLimit?size=&price=&agentId=
-func buyLimit(w http.ResponseWriter, r *http.Request) {
+// market/{ASSET_ID}/marketBuyLimit?size=&price=&agentId=
+func marketBuyLimit(w http.ResponseWriter, r *http.Request) {
 	m := econ.market[mux.Vars(r)["ASSET_ID"]]
 	q := r.URL.Query()
 	if size, e := strconv.ParseFloat(q.Get("size"), 64); e == nil {
@@ -50,8 +50,8 @@ func buyLimit(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// market/{ASSET_ID}/sellLimit?size=&price=&agentId=
-func sellLimit(w http.ResponseWriter, r *http.Request) {
+// market/{ASSET_ID}/marketSellLimit?size=&price=&agentId=
+func marketSellLimit(w http.ResponseWriter, r *http.Request) {
 	m := econ.market[mux.Vars(r)["ASSET_ID"]]
 	q := r.URL.Query()
 	if size, e := strconv.ParseFloat(q.Get("size"), 64); e == nil {
@@ -61,21 +61,24 @@ func sellLimit(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// market/{ASSET_ID}/buy?amount=&agentId=
-func buy(w http.ResponseWriter, r *http.Request) {
-	m := econ.market[mux.Vars(r)["ASSET_ID"]]
+// market/{ASSET_ID}/marketBuy?amount=&agentId=
+func marketBuy(w http.ResponseWriter, r *http.Request) {
+	assetId := mux.Vars(r)["ASSET_ID"]
+	m := econ.market[assetId]
 	q := r.URL.Query()
 	if amount, e := strconv.ParseFloat(q.Get("amount"), 64); e == nil {
-		m.Asks = processOrder(amount, q.Get("agentId"), m.Asks)
+		m.Asks = processOrder("bid", assetId, amount, q.Get("agentId"), m.Asks)
 	}
 }
 
-// market/{ASSET_ID}/sell?amount=&agentId=
-func sell(w http.ResponseWriter, r *http.Request) {
-	m := econ.market[mux.Vars(r)["ASSET_ID"]]
+// market/{ASSET_ID}/marketSell?amount=&agentId=
+func marketSell(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
+	assetId := mux.Vars(r)["ASSET_ID"]
+	agentId := q.Get("agentId")
+	m := econ.market[assetId]
 	if amount, e := strconv.ParseFloat(q.Get("amount"), 64); e == nil {
-		m.Bids = processOrder(amount, q.Get("agentId"), m.Bids)
+		m.Bids = processOrder("ask", assetId, amount, agentId, m.Bids)
 	}
 }
 
@@ -96,13 +99,15 @@ func processLimitOrder(side string, size float64, price float64, agentId string,
 	return prices
 }
 
-func processOrder(amount float64, agentId string, prices []Price) []Price {
+func processOrder(side string, assetId string, amount float64, agentId string, prices []Price) []Price {
 	for i := 0; i < len(prices); i++ {
 		price := &prices[i]
 		for j := 0; j < len(price.Orders); j++ {
 			order := &price.Orders[j]
 			if order.Size*price.Value >= amount {
-				order.Size -= amount / price.Value
+				size := amount / price.Value
+				order.Size -= size
+				matchOrder(side, assetId, size, price.Value, order.AgentId, agentId)
 				j += util.Btoi(order.Size == 0)
 				i += util.Btoi(j == len(price.Orders))
 				price.Orders = price.Orders[j:]
@@ -110,12 +115,28 @@ func processOrder(amount float64, agentId string, prices []Price) []Price {
 				return prices
 			}
 			amount -= order.Size * price.Value
+			matchOrder(side, assetId, order.Size, price.Value, order.AgentId, agentId)
 		}
 	}
 	if amount > 0 {
 		// TODO: maybe return the remaining amount that couldn't buy?
 	}
 	return prices
+}
+
+func matchOrder(side string, assetId string, size float64, price float64, maker string, taker string) {
+	if side == "bid" {
+		transfer(assetId, size, maker, taker)
+		transfer(CASH, size*price, taker, maker)
+	} else if side == "ask" {
+		transfer(assetId, size, taker, maker)
+		transfer(CASH, size*price, maker, taker)
+	}
+}
+
+func transfer(assetId string, size float64, from string, to string) {
+	econ.agent[from].Balance[assetId] -= size
+	econ.agent[to].Balance[assetId] += size
 }
 
 func (m *Market) bestAsk() float64 {

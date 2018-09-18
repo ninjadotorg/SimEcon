@@ -12,6 +12,9 @@ const (
 
 	// ENV VARS
 	WELFARE_AMOUNT = 10
+
+	// SERVER
+	PORT = ":8080"
 )
 
 type Economy struct {
@@ -26,25 +29,26 @@ var econ Economy = Economy{
 	production: make(map[string]*Production),
 }
 
-func Run(file string) {
+func Run() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/agent/{AGENT_ID}", agent)
-	r.HandleFunc("/agent/{AGENT_ID}/new", newAgent)
-	r.HandleFunc("/agent/{AGENT_ID}/welfare", welfare)
+	r.HandleFunc("/agent/{AGENT_ID}/new", agentNew)
+	r.HandleFunc("/agent/{AGENT_ID}/welfare", agentWelfare)
 	r.HandleFunc("/agent/{AGENT_ID}/type", agentType)
-	r.HandleFunc("/agent/{AGENT_ID}/asset/all", agentAllAssets)
+	r.HandleFunc("/agent/{AGENT_ID}/asset/all", agentAssets)
 	r.HandleFunc("/agent/{AGENT_ID}/asset/{ASSET_ID}", agentAsset)
+	r.HandleFunc("/agent/{AGENT_ID}/produce", agentProduce)
 
 	r.HandleFunc("/market/{ASSET_ID}", market)
-	r.HandleFunc("/market/{ASSET_ID}/new", newMarket)
-	r.HandleFunc("/market/{ASSET_ID}/buy", buy)
-	r.HandleFunc("/market/{ASSET_ID}/sell", sell)
-	r.HandleFunc("/market/{ASSET_ID}/buyLimit", buyLimit)
-	r.HandleFunc("/market/{ASSET_ID}/sellLimit", sellLimit)
+	r.HandleFunc("/market/{ASSET_ID}/new", marketNew)
+	r.HandleFunc("/market/{ASSET_ID}/buy", marketBuy)
+	r.HandleFunc("/market/{ASSET_ID}/sell", marketSell)
+	r.HandleFunc("/market/{ASSET_ID}/buyLimit", marketBuyLimit)
+	r.HandleFunc("/market/{ASSET_ID}/sellLimit", marketSellLimit)
 
 	r.HandleFunc("/production/{PRODUCTION_ID}", production)
-	r.HandleFunc("/production/{PRODUCTION_ID}/new", newProduction)
+	r.HandleFunc("/production/{PRODUCTION_ID}/new", productionNew)
 
-	http.ListenAndServe(":8080", r)
+	http.ListenAndServe(PORT, r)
 }

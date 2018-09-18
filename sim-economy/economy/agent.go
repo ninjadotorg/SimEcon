@@ -15,7 +15,7 @@ type Agent struct {
 }
 
 // agent/{AGENT_ID}/new?productionId=
-func newAgent(w http.ResponseWriter, r *http.Request) {
+func agentNew(w http.ResponseWriter, r *http.Request) {
 	if econ.production[r.URL.Query().Get("productionId")] != nil {
 		econ.agent[mux.Vars(r)["AGENT_ID"]] = &Agent{
 			ProductionId: r.URL.Query().Get("productionId"),
@@ -24,8 +24,8 @@ func newAgent(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// agent/{AGENT_ID}/welfare
-func welfare(w http.ResponseWriter, r *http.Request) {
+// agent/{AGENT_ID}/agentWelfare
+func agentWelfare(w http.ResponseWriter, r *http.Request) {
 	agentId := mux.Vars(r)["AGENT_ID"]
 	if !econ.agent[agentId].Welfare {
 		if a, ok := econ.agent[agentId]; ok {
@@ -52,7 +52,7 @@ func agentType(w http.ResponseWriter, r *http.Request) {
 }
 
 // agent/{AGENT_ID}/asset/all
-func agentAllAssets(w http.ResponseWriter, r *http.Request) {
+func agentAssets(w http.ResponseWriter, r *http.Request) {
 	if a, ok := econ.agent[mux.Vars(r)["AGENT_ID"]]; ok {
 		if js, e := json.Marshal(a.Balance); e == nil {
 			fmt.Fprintf(w, string(js))
@@ -68,7 +68,7 @@ func agentAsset(w http.ResponseWriter, r *http.Request) {
 }
 
 // agent/{AGENT_ID}/produce?input=
-func produce(w http.ResponseWriter, r *http.Request) {
+func agentProduce(w http.ResponseWriter, r *http.Request) {
 	if a, ok := econ.agent[mux.Vars(r)["AGENT_ID"]]; ok {
 		p := econ.production[a.ProductionId]
 		var input map[string]float64
