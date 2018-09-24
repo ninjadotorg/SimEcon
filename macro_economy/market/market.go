@@ -33,6 +33,10 @@ func (m *Market) Buy(
 			continue
 		}
 
+		sellerAsset, _ := st.GetAgentAsset(
+			bid.GetAgentID(),
+			bid.GetAssetType(),
+		)
 		// TODO: get actual qty of asset of agent who owns the bid
 		if bid.GetQuantity() >= orderItemReq.Quantity {
 			am.Pay(
@@ -45,6 +49,9 @@ func (m *Market) Buy(
 			if bid.GetQuantity() == 0 {
 				removingBidAgentIDs = append(removingBidAgentIDs, bid.GetAgentID())
 			}
+			sellerAsset.SetQuantity(sellerAsset.GetQuantity() - orderItemReq.Quantity)
+			st.UpdateAsset(bid.GetAgentID(), sellerAsset)
+			orderItemReq.Quantity = 0
 			break
 		}
 		am.Pay(
@@ -53,6 +60,9 @@ func (m *Market) Buy(
 			bid.GetPricePerUnit()*bid.GetQuantity(),
 			common.PRIIC,
 		)
+		sellerAsset.SetQuantity(sellerAsset.GetQuantity() - bid.GetQuantity())
+		st.UpdateAsset(bid.GetAgentID(), sellerAsset)
+
 		orderItemReq.Quantity -= bid.GetQuantity()
 		bid.SetQuantity(0)
 		removingBidAgentIDs = append(removingBidAgentIDs, bid.GetAgentID())
@@ -90,6 +100,12 @@ func (m *Market) Sell(
 		if ask.GetPricePerUnit() < orderItemReq.PricePerUnit {
 			continue
 		}
+
+		buyerAsset, _ := st.GetAgentAsset(
+			ask.GetAgentID(),
+			ask.GetAssetType(),
+		)
+
 		if ask.GetQuantity() >= orderItemReq.Quantity {
 			am.Pay(
 				ask.GetAgentID(),
@@ -101,6 +117,11 @@ func (m *Market) Sell(
 			if ask.GetQuantity() == 0 {
 				removingAskAgentIDs = append(removingAskAgentIDs, ask.GetAgentID())
 			}
+
+			buyerAsset.SetQuantity(buyerAsset.GetQuantity() + orderItemReq.Quantity)
+			st.UpdateAsset(ask.GetAgentID(), buyerAsset)
+
+			orderItemReq.Quantity = 0
 			break
 		}
 		am.Pay(
@@ -109,6 +130,10 @@ func (m *Market) Sell(
 			ask.GetPricePerUnit()*ask.GetQuantity(),
 			common.PRIIC,
 		)
+
+		buyerAsset.SetQuantity(buyerAsset.GetQuantity() + ask.GetQuantity())
+		st.UpdateAsset(ask.GetAgentID(), buyerAsset)
+
 		orderItemReq.Quantity -= ask.GetQuantity()
 		ask.SetQuantity(0)
 		removingAskAgentIDs = append(removingAskAgentIDs, ask.GetAgentID())

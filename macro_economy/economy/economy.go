@@ -56,7 +56,7 @@ func (econ *Economy) Run() {
 	r.HandleFunc("/agents/{AGENT_ID}/assets", wrap(econ, GetAgentAssets)).Methods("GET")
 	r.HandleFunc("/agents/{AGENT_ID}/produce", wrap(econ, Produce)).Methods("POST")
 	r.HandleFunc("/agents/{AGENT_ID}/buy", wrap(econ, Buy)).Methods("POST")
-	r.HandleFunc("/agents/{AGENT_ID}/sell", wrap(econ, Buy)).Methods("POST")
+	r.HandleFunc("/agents/{AGENT_ID}/sell", wrap(econ, Sell)).Methods("POST")
 
 	fmt.Printf("Listening on port %s", PORT)
 	http.ListenAndServe(PORT, r)
