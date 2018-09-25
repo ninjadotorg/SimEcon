@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	NUMBER_OF_AGENTS     = 3
-	AGENT_TYPE           = 1
-	PERSISTENT_FILE_PATH = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/micro_economy/person/persistent.json"
+	NUMBER_OF_AGENTS     = 1
+	AGENT_TYPE           = 3
+	PERSISTENT_FILE_PATH = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/micro_economy/cfirm/persistent.json"
 )
 
 func process(
@@ -37,26 +37,25 @@ func process(
 		return
 	}
 
-	// produce man hours from necessity
-	// eat all necessecity
-	nAsset, _ := agentAssets[common.NECESSITY]
+	// produce capital from man hours
+	mhAsset, _ := agentAssets[common.MAN_HOUR]
 	producedAgentAssets, err := common.Produce(
 		httpClient,
 		agentID,
-		map[uint]*common.Asset{common.NECESSITY: nAsset},
+		map[uint]*common.Asset{common.MAN_HOUR: mhAsset},
 	)
 	if err != nil {
-		fmt.Printf("Produce man hours from necessity error: %s\n", err.Error())
+		fmt.Printf("Produce capital from man hours error: %s\n", err.Error())
 		return
 	}
 
-	// sell man hours
-	mhAsset, _ := producedAgentAssets[common.MAN_HOUR]
+	// sell capital
+	cAsset, _ := producedAgentAssets[common.CAPITAL]
 	orderSellItem := &common.OrderItem{
 		AgentID:      agentID,
-		AssetType:    common.MAN_HOUR,
-		Quantity:     mhAsset.Quantity,
-		PricePerUnit: 20,
+		AssetType:    common.CAPITAL,
+		Quantity:     cAsset.Quantity,
+		PricePerUnit: 15,
 	}
 	_, err = common.Order(
 		httpClient,
@@ -65,16 +64,16 @@ func process(
 		"sell",
 	)
 	if err != nil {
-		fmt.Printf("Sell man hours error: %s\n", err.Error())
+		fmt.Printf("Sell capital error: %s\n", err.Error())
 		return
 	}
 
-	// buy necessity
+	// buy man hours
 	orderBuyItem := &common.OrderItem{
 		AgentID:      agentID,
-		AssetType:    common.NECESSITY,
-		Quantity:     math.Floor(walBal / 10),
-		PricePerUnit: 10,
+		AssetType:    common.MAN_HOUR,
+		Quantity:     math.Floor(walBal / 21),
+		PricePerUnit: 21,
 	}
 	_, err = common.Order(
 		httpClient,
@@ -83,7 +82,7 @@ func process(
 		"buy",
 	)
 	if err != nil {
-		fmt.Printf("Buy necessity error: %s\n", err.Error())
+		fmt.Printf("Buy man hours error: %s\n", err.Error())
 		return
 	}
 

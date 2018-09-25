@@ -15,8 +15,8 @@ import (
 
 const (
 	NUMBER_OF_AGENTS     = 3
-	AGENT_TYPE           = 1
-	PERSISTENT_FILE_PATH = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/micro_economy/person/persistent.json"
+	AGENT_TYPE           = 2
+	PERSISTENT_FILE_PATH = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/micro_economy/nfirm/persistent.json"
 )
 
 func process(
@@ -37,26 +37,29 @@ func process(
 		return
 	}
 
-	// produce man hours from necessity
-	// eat all necessecity
-	nAsset, _ := agentAssets[common.NECESSITY]
+	// produce necessity from capital & man hours
+	mhAsset, _ := agentAssets[common.MAN_HOUR]
+	cAsset, _ := agentAssets[common.CAPITAL]
 	producedAgentAssets, err := common.Produce(
 		httpClient,
 		agentID,
-		map[uint]*common.Asset{common.NECESSITY: nAsset},
+		map[uint]*common.Asset{
+			common.MAN_HOUR: mhAsset,
+			common.CAPITAL:  cAsset,
+		},
 	)
 	if err != nil {
-		fmt.Printf("Produce man hours from necessity error: %s\n", err.Error())
+		fmt.Printf("Produce necessity from capital & man hours error: %s\n", err.Error())
 		return
 	}
 
-	// sell man hours
-	mhAsset, _ := producedAgentAssets[common.MAN_HOUR]
+	// sell necessity
+	nAsset, _ := producedAgentAssets[common.NECESSITY]
 	orderSellItem := &common.OrderItem{
 		AgentID:      agentID,
-		AssetType:    common.MAN_HOUR,
-		Quantity:     mhAsset.Quantity,
-		PricePerUnit: 20,
+		AssetType:    common.NECESSITY,
+		Quantity:     nAsset.Quantity,
+		PricePerUnit: 12,
 	}
 	_, err = common.Order(
 		httpClient,
@@ -65,25 +68,47 @@ func process(
 		"sell",
 	)
 	if err != nil {
-		fmt.Printf("Sell man hours error: %s\n", err.Error())
+		fmt.Printf("Sell necessity error: %s\n", err.Error())
 		return
 	}
 
-	// buy necessity
-	orderBuyItem := &common.OrderItem{
+	// buy capital
+	pricePerCapital := 9.0
+	balForCapital := walBal / 2
+	orderBuyCapital := &common.OrderItem{
 		AgentID:      agentID,
-		AssetType:    common.NECESSITY,
-		Quantity:     math.Floor(walBal / 10),
-		PricePerUnit: 10,
+		AssetType:    common.CAPITAL,
+		Quantity:     math.Floor(balForCapital / pricePerCapital),
+		PricePerUnit: pricePerCapital,
 	}
 	_, err = common.Order(
 		httpClient,
 		agentID,
-		orderBuyItem,
+		orderBuyCapital,
 		"buy",
 	)
 	if err != nil {
-		fmt.Printf("Buy necessity error: %s\n", err.Error())
+		fmt.Printf("Buy capital error: %s\n", err.Error())
+		return
+	}
+
+	// buy man hours
+	pricePerManHour := 22.0
+	balForManHour := walBal - balForCapital
+	orderBuyManHour := &common.OrderItem{
+		AgentID:      agentID,
+		AssetType:    common.CAPITAL,
+		Quantity:     math.Floor(balForManHour / pricePerManHour),
+		PricePerUnit: pricePerManHour,
+	}
+	_, err = common.Order(
+		httpClient,
+		agentID,
+		orderBuyManHour,
+		"buy",
+	)
+	if err != nil {
+		fmt.Printf("Buy man hours error: %s\n", err.Error())
 		return
 	}
 

@@ -47,7 +47,12 @@ func (st *Storage) InsertAgent(
 		newAgent = &NecessityFirm{
 			agent,
 		}
+	} else if agentType == common.CAPITAL_FIRM {
+		newAgent = &CapitalFirm{
+			agent,
+		}
 	}
+
 	st.Agents[agentID] = newAgent
 	return newAgent
 }
