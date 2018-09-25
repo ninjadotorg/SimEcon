@@ -54,6 +54,7 @@ func (econ *Economy) Run() {
 
 	r.HandleFunc("/types/{AGENT_TYPE}/agents", wrap(econ, Join)).Methods("POST")
 	r.HandleFunc("/agents/{AGENT_ID}/assets", wrap(econ, GetAgentAssets)).Methods("GET")
+	r.HandleFunc("/agents/{AGENT_ID}/wallet/balance", wrap(econ, GetWalletAccountBalance)).Methods("GET")
 	r.HandleFunc("/agents/{AGENT_ID}/produce", wrap(econ, Produce)).Methods("POST")
 	r.HandleFunc("/agents/{AGENT_ID}/buy", wrap(econ, Buy)).Methods("POST")
 	r.HandleFunc("/agents/{AGENT_ID}/sell", wrap(econ, Sell)).Methods("POST")

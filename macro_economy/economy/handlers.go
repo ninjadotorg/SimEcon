@@ -30,15 +30,15 @@ func Join(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	}
 
 	// just for demo
-	if counter == 1 {
-		newAgentID = "04103203-829E-452D-B9FE-A8017F7541B6"
-	}
-	if counter == 2 {
-		newAgentID = "AE8B49DF-B96E-4E87-AAB9-B7B7E16B48D0"
-	}
-	if counter == 3 {
-		newAgentID = "E44DAF38-D2E8-4DBC-9A37-29F917A7DB0F"
-	}
+	// if counter == 1 {
+	// 	newAgentID = "04103203-829E-452D-B9FE-A8017F7541B6"
+	// }
+	// if counter == 2 {
+	// 	newAgentID = "AE8B49DF-B96E-4E87-AAB9-B7B7E16B48D0"
+	// }
+	// if counter == 3 {
+	// 	newAgentID = "E44DAF38-D2E8-4DBC-9A37-29F917A7DB0F"
+	// }
 
 	mutex.Lock()
 	// open wallet account
@@ -111,10 +111,22 @@ func GetAgentAssets(w http.ResponseWriter, r *http.Request, econ *Economy) {
 
 	// TODO: get actual qty of these assets
 
-	res := map[string]interface{}{}
-	res["result"] = assets
+	jsInBytes, _ := json.Marshal(assets)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsInBytes)
+}
 
-	jsInBytes, _ := json.Marshal(res)
+// POST /agents/{AGENT_ID}/wallet/balance
+func GetWalletAccountBalance(w http.ResponseWriter, r *http.Request, econ *Economy) {
+	am := econ.AccountManager
+	agentID := mux.Vars(r)["AGENT_ID"]
+	bal := am.GetBalance(agentID)
+	jsInBytes, _ := json.Marshal(
+		map[string]interface{}{
+			"agentId": agentID,
+			"balance": bal,
+		},
+	)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsInBytes)
 }

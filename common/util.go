@@ -1,6 +1,7 @@
 package common
 
 import (
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -23,4 +24,12 @@ func Btoi(b bool) int {
 	} else {
 		return 0
 	}
+}
+
+func GetEnv(key, fallback string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return fallback
+	}
+	return value
 }

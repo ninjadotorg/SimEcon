@@ -36,5 +36,5 @@ const (
 
 	// init account balance
 	DEFAULT_ACCOUNT_BALANCE = 0
-	NFIRM_ACCOUNT_BALANCE   = 25
+	NFIRM_ACCOUNT_BALANCE   = 50
 )
