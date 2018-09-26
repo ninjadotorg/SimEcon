@@ -29,16 +29,16 @@ func Join(w http.ResponseWriter, r *http.Request, econ *Economy) {
 		return
 	}
 
-	// just for demo
-	// if counter == 1 {
-	// 	newAgentID = "04103203-829E-452D-B9FE-A8017F7541B6"
-	// }
-	// if counter == 2 {
-	// 	newAgentID = "AE8B49DF-B96E-4E87-AAB9-B7B7E16B48D0"
-	// }
-	// if counter == 3 {
-	// 	newAgentID = "E44DAF38-D2E8-4DBC-9A37-29F917A7DB0F"
-	// }
+	//just for demo
+	if counter == 1 {
+		newAgentID = "04103203-829E-452D-B9FE-A8017F7541B6"
+	}
+	if counter == 2 {
+		newAgentID = "AE8B49DF-B96E-4E87-AAB9-B7B7E16B48D0"
+	}
+	if counter == 3 {
+		newAgentID = "E44DAF38-D2E8-4DBC-9A37-29F917A7DB0F"
+	}
 
 	mutex.Lock()
 	// open wallet account
@@ -58,6 +58,33 @@ func Join(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	w.Write(jsInBytes)
 }
 
+func validateRequestedProduce(agentType uint, assetsReq map[uint]*dto.Asset) bool {
+	assetTypesReq := []uint{}
+	for assetType, _ := range assetsReq {
+		assetTypesReq = append(assetTypesReq, assetType)
+	}
+	validationMap := map[uint][]uint{
+		common.PERSON:         []uint{common.NECESSITY},
+		common.NECESSITY_FIRM: []uint{common.MAN_HOUR, common.CAPITAL},
+		common.CAPITAL_FIRM:   []uint{common.MAN_HOUR},
+	}
+	if len(validationMap[agentType]) != len(assetTypesReq) {
+		return false
+	}
+	for _, validatedAssetType := range validationMap[agentType] {
+		found := false
+		for _, assetTypeReq := range assetTypesReq {
+			if assetTypeReq == validatedAssetType {
+				found = true
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
 // POST /agents/{AGENT_ID}/produce
 func Produce(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	var mutex = &sync.Mutex{}
@@ -72,12 +99,17 @@ func Produce(w http.ResponseWriter, r *http.Request, econ *Economy) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// TODO: validate assets requested by agent type
 
 	agentID := mux.Vars(r)["AGENT_ID"]
 	agent, err := st.GetAgentByID(agentID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	isValid := validateRequestedProduce(agent.GetType(), assetsReq)
+	if !isValid {
+		http.Error(w, "Assets requested are invalid for this agent type.", http.StatusBadRequest)
 		return
 	}
 
@@ -103,15 +135,15 @@ func Produce(w http.ResponseWriter, r *http.Request, econ *Economy) {
 func GetAgentAssets(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	agentID := mux.Vars(r)["AGENT_ID"]
 	st := econ.Storage
+	prod := econ.Production
 	assets, err := st.GetAgentAssets(agentID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// TODO: get actual qty of these assets
-
-	jsInBytes, _ := json.Marshal(assets)
+	actualAssets := prod.GetActualAssets(assets)
+	jsInBytes, _ := json.Marshal(actualAssets)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsInBytes)
 }
@@ -148,38 +180,20 @@ func Buy(w http.ResponseWriter, r *http.Request, econ *Economy) {
 		return
 	}
 
-	agent, err := st.GetAgentByID(agentID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	agentAsset, err := st.GetAgentAsset(agentID, orderItemReq.AssetType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	agentProd, err := prod.GetProductionByAgentType(agent.GetType())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	curAsset := agentProd.GetActualAsset(agentAsset)
+	curAsset := prod.GetActualAsset(agentAsset)
 	accBal := am.GetBalance(agentID)
-	res := map[string]interface{}{
-		"message":           "Process buy order successfully.",
-		"oldAssetQuantity":  curAsset.GetQuantity(),
-		"oldAccountBalance": accBal,
-	}
-
 	reqQty := orderItemReq.Quantity
 
 	// validate if coin balance is enough for the order or not?
 	// TODO: should validate the other buy orders of this agent (on other asset type)
 	if accBal < orderItemReq.Quantity*orderItemReq.PricePerUnit {
-		res = map[string]interface{}{
+		res := map[string]interface{}{
 			"message":        "Not enough money for the buy order",
 			"accountBalance": accBal,
 			"orderQuantity":  reqQty,
@@ -191,8 +205,14 @@ func Buy(w http.ResponseWriter, r *http.Request, econ *Economy) {
 		return
 	}
 
+	res := map[string]interface{}{
+		"message":           "Process buy order successfully.",
+		"oldAssetQuantity":  curAsset.GetQuantity(),
+		"oldAccountBalance": accBal,
+	}
+
 	mutex.Lock()
-	remainingRequestedQty, err := mk.Buy(agentID, orderItemReq, st, am)
+	remainingRequestedQty, err := mk.Buy(agentID, orderItemReq, st, am, prod)
 	mutex.Unlock()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -229,26 +249,14 @@ func Sell(w http.ResponseWriter, r *http.Request, econ *Economy) {
 		return
 	}
 
-	agent, err := st.GetAgentByID(agentID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	agentAsset, err := st.GetAgentAsset(agentID, orderItemReq.AssetType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	agentProd, err := prod.GetProductionByAgentType(agent.GetType())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	reqQty := orderItemReq.Quantity
-	curAsset := agentProd.GetActualAsset(agentAsset)
+	curAsset := prod.GetActualAsset(agentAsset)
 	if curAsset.GetQuantity() < orderItemReq.Quantity {
 		res := map[string]interface{}{
 			"message":           "Not enough asset quantity for the sell order",
@@ -269,7 +277,7 @@ func Sell(w http.ResponseWriter, r *http.Request, econ *Economy) {
 		"oldAccountBalance": accBal,
 	}
 	mutex.Lock()
-	remainingRequestedQty, err := mk.Sell(agentID, orderItemReq, st, am)
+	remainingRequestedQty, err := mk.Sell(agentID, orderItemReq, st, am, prod)
 	mutex.Unlock()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -55,9 +55,3 @@ func (nfp *NFirmProduction) Produce(
 	res, _ := st.GetAgentAssets(agentID)
 	return res, nil
 }
-
-func (nfp *NFirmProduction) GetActualAsset(
-	asset abstraction.Asset,
-) abstraction.Asset {
-	return computeDecayNecessity(asset)
-}

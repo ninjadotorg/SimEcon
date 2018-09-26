@@ -11,6 +11,7 @@ import (
 
 type Production struct {
 	AgentTypeToAgentProduction map[uint]abstraction.AgentProduction
+	AssetTypeToDecayFunction   map[uint]func(abstraction.Asset) abstraction.Asset
 }
 
 var production *Production
@@ -24,6 +25,11 @@ func GetProductionInstance() *Production {
 			common.PERSON:         &PersonProduction{},
 			common.NECESSITY_FIRM: &NFirmProduction{},
 			common.CAPITAL_FIRM:   &CFirmProduction{},
+		},
+		AssetTypeToDecayFunction: map[uint]func(abstraction.Asset) abstraction.Asset{
+			common.NECESSITY: computeDecayNecessity,
+			common.CAPITAL:   computeDecayCapital,
+			common.MAN_HOUR:  computeDecayManHours,
 		},
 	}
 	return production
@@ -65,4 +71,23 @@ func (prod *Production) GetProductionByAgentType(
 		return nil, errors.New("Agent ID not found")
 	}
 	return agentProd, nil
+}
+
+func (prod *Production) GetActualAsset(
+	asset abstraction.Asset,
+) abstraction.Asset {
+	assetType := asset.GetType()
+	decayFunc := prod.AssetTypeToDecayFunction[assetType]
+	return decayFunc(asset)
+}
+
+func (prod *Production) GetActualAssets(
+	assets map[uint]abstraction.Asset,
+) map[uint]abstraction.Asset {
+	actualAssets := map[uint]abstraction.Asset{}
+	for assetType, asset := range assets {
+		decayFunc := prod.AssetTypeToDecayFunction[assetType]
+		actualAssets[assetType] = decayFunc(asset)
+	}
+	return actualAssets
 }

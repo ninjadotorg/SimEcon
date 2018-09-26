@@ -1,6 +1,8 @@
 package market
 
 import (
+	"math"
+
 	"github.com/ninjadotorg/SimEcon/common"
 	"github.com/ninjadotorg/SimEcon/macro_economy/abstraction"
 	"github.com/ninjadotorg/SimEcon/macro_economy/dto"
@@ -24,6 +26,7 @@ func (m *Market) Buy(
 	orderItemReq *dto.OrderItem,
 	st abstraction.Storage,
 	am abstraction.AccountManager,
+	prod abstraction.Production,
 ) (float64, error) {
 	sortedBidsByAssetType := st.GetSortedBidsByAssetType(orderItemReq.AssetType, false)
 
@@ -37,33 +40,34 @@ func (m *Market) Buy(
 			bid.GetAgentID(),
 			bid.GetAssetType(),
 		)
-		// TODO: get actual qty of asset of agent who owns the bid
-		if bid.GetQuantity() >= orderItemReq.Quantity {
+		sellerActualAsset := prod.GetActualAsset(sellerAsset)
+		actualBidQty := math.Min(sellerActualAsset.GetQuantity(), bid.GetQuantity())
+		if actualBidQty >= orderItemReq.Quantity {
 			am.Pay(
 				agentID,
 				bid.GetAgentID(),
 				bid.GetPricePerUnit()*orderItemReq.Quantity,
 				common.PRIIC,
 			)
-			bid.SetQuantity(bid.GetQuantity() - orderItemReq.Quantity)
+			bid.SetQuantity(actualBidQty - orderItemReq.Quantity)
 			if bid.GetQuantity() == 0 {
 				removingBidAgentIDs = append(removingBidAgentIDs, bid.GetAgentID())
 			}
-			sellerAsset.SetQuantity(sellerAsset.GetQuantity() - orderItemReq.Quantity)
-			st.UpdateAsset(bid.GetAgentID(), sellerAsset)
+			sellerActualAsset.SetQuantity(sellerActualAsset.GetQuantity() - orderItemReq.Quantity)
+			st.UpdateAsset(bid.GetAgentID(), sellerActualAsset)
 			orderItemReq.Quantity = 0
 			break
 		}
 		am.Pay(
 			agentID,
 			bid.GetAgentID(),
-			bid.GetPricePerUnit()*bid.GetQuantity(),
+			bid.GetPricePerUnit()*actualBidQty,
 			common.PRIIC,
 		)
-		sellerAsset.SetQuantity(sellerAsset.GetQuantity() - bid.GetQuantity())
-		st.UpdateAsset(bid.GetAgentID(), sellerAsset)
+		orderItemReq.Quantity -= actualBidQty
+		sellerActualAsset.SetQuantity(sellerActualAsset.GetQuantity() - actualBidQty)
+		st.UpdateAsset(bid.GetAgentID(), sellerActualAsset)
 
-		orderItemReq.Quantity -= bid.GetQuantity()
 		bid.SetQuantity(0)
 		removingBidAgentIDs = append(removingBidAgentIDs, bid.GetAgentID())
 	}
@@ -92,6 +96,7 @@ func (m *Market) Sell(
 	orderItemReq *dto.OrderItem,
 	st abstraction.Storage,
 	am abstraction.AccountManager,
+	prod abstraction.Production,
 ) (float64, error) {
 	sortedAsksByAssetType := st.GetSortedAsksByAssetType(orderItemReq.AssetType, false)
 
@@ -105,6 +110,13 @@ func (m *Market) Sell(
 			ask.GetAgentID(),
 			ask.GetAssetType(),
 		)
+		buyerActualAsset := prod.GetActualAsset(buyerAsset)
+
+		askBalance := am.GetBalance(ask.GetAgentID())
+		if askBalance < ask.GetPricePerUnit()*math.Min(orderItemReq.Quantity, ask.GetQuantity()) {
+			removingAskAgentIDs = append(removingAskAgentIDs, ask.GetAgentID())
+			continue
+		}
 
 		if ask.GetQuantity() >= orderItemReq.Quantity {
 			am.Pay(
@@ -118,8 +130,8 @@ func (m *Market) Sell(
 				removingAskAgentIDs = append(removingAskAgentIDs, ask.GetAgentID())
 			}
 
-			buyerAsset.SetQuantity(buyerAsset.GetQuantity() + orderItemReq.Quantity)
-			st.UpdateAsset(ask.GetAgentID(), buyerAsset)
+			buyerActualAsset.SetQuantity(buyerActualAsset.GetQuantity() + orderItemReq.Quantity)
+			st.UpdateAsset(ask.GetAgentID(), buyerActualAsset)
 
 			orderItemReq.Quantity = 0
 			break
@@ -131,8 +143,8 @@ func (m *Market) Sell(
 			common.PRIIC,
 		)
 
-		buyerAsset.SetQuantity(buyerAsset.GetQuantity() + ask.GetQuantity())
-		st.UpdateAsset(ask.GetAgentID(), buyerAsset)
+		buyerActualAsset.SetQuantity(buyerActualAsset.GetQuantity() + ask.GetQuantity())
+		st.UpdateAsset(ask.GetAgentID(), buyerActualAsset)
 
 		orderItemReq.Quantity -= ask.GetQuantity()
 		ask.SetQuantity(0)
