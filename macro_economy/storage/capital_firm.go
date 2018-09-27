@@ -1,10 +1,12 @@
 package storage
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/ninjadotorg/SimEcon/common"
 	"github.com/ninjadotorg/SimEcon/macro_economy/abstraction"
+	"github.com/ninjadotorg/SimEcon/macro_economy/dto"
 )
 
 type CapitalFirm struct {
@@ -33,4 +35,12 @@ func (c *CapitalFirm) InitAgentAssets(
 
 func (c *CapitalFirm) GetType() uint {
 	return c.Type
+}
+
+func (c *CapitalFirm) UpdateAgent(
+	st abstraction.Storage,
+	agentDTO abstraction.AgentDTO,
+) {
+	updatingCFirm := agentDTO.(*dto.CapitalFirm)
+	fmt.Println("updatingCFirm: ", updatingCFirm)
 }

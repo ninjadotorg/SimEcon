@@ -8,55 +8,13 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ninjadotorg/SimEcon/common"
+	"github.com/ninjadotorg/SimEcon/macro_economy/abstraction"
 	"github.com/ninjadotorg/SimEcon/macro_economy/dto"
 )
 
 // TODO: will remove unnecessary mutex locks when using real DB (Redis, Couchbase, LevelDB, ...)
 
 var counter = 0
-
-// POST /types/{AGENT_TYPE}/agents
-func Join(w http.ResponseWriter, r *http.Request, econ *Economy) {
-	counter += 1
-	var mutex = &sync.Mutex{}
-	newAgentID := common.UUID()
-
-	am := econ.AccountManager
-	st := econ.Storage
-	agentType, err := strconv.Atoi(mux.Vars(r)["AGENT_TYPE"])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	//just for demo
-	if counter == 1 {
-		newAgentID = "04103203-829E-452D-B9FE-A8017F7541B6"
-	}
-	if counter == 2 {
-		newAgentID = "AE8B49DF-B96E-4E87-AAB9-B7B7E16B48D0"
-	}
-	if counter == 3 {
-		newAgentID = "E44DAF38-D2E8-4DBC-9A37-29F917A7DB0F"
-	}
-
-	mutex.Lock()
-	// open wallet account
-	var initBal float64 = common.DEFAULT_ACCOUNT_BALANCE
-	if agentType == common.NECESSITY_FIRM {
-		initBal = common.NFIRM_ACCOUNT_BALANCE
-	}
-	am.OpenWalletAccount(newAgentID, initBal)
-
-	// insert new agent
-	agent := st.InsertAgent(newAgentID, uint(agentType))
-	agent.InitAgentAssets(st)
-	mutex.Unlock()
-
-	jsInBytes, _ := json.Marshal(agent)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsInBytes)
-}
 
 func validateRequestedProduce(agentType uint, assetsReq map[uint]*dto.Asset) bool {
 	assetTypesReq := []uint{}
@@ -83,6 +41,126 @@ func validateRequestedProduce(agentType uint, assetsReq map[uint]*dto.Asset) boo
 		}
 	}
 	return true
+}
+
+func decodePersonDTO(
+	r *http.Request,
+) (abstraction.AgentDTO, error) {
+	var personDTO dto.Person
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&personDTO)
+	if err != nil {
+		return nil, err
+	}
+	return personDTO, nil
+}
+
+func decodeNecessityFirmDTO(
+	r *http.Request,
+) (abstraction.AgentDTO, error) {
+	var nFirmDTO dto.NecessityFirm
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&nFirmDTO)
+	if err != nil {
+		return nil, err
+	}
+	return nFirmDTO, nil
+}
+
+func decodeCapitalFirmDTO(
+	r *http.Request,
+) (abstraction.AgentDTO, error) {
+	var cFirmDTO dto.CapitalFirm
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&cFirmDTO)
+	if err != nil {
+		return nil, err
+	}
+	return cFirmDTO, nil
+}
+
+// POST /types/{AGENT_TYPE}/agents
+func Join(w http.ResponseWriter, r *http.Request, econ *Economy) {
+	counter += 1
+	var mutex = &sync.Mutex{}
+	newAgentID := common.UUID()
+
+	am := econ.AccountManager
+	st := econ.Storage
+	agentType, err := strconv.Atoi(mux.Vars(r)["AGENT_TYPE"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// //just for demo
+	// if counter == 1 {
+	// 	newAgentID = "04103203-829E-452D-B9FE-A8017F7541B6"
+	// }
+	// if counter == 2 {
+	// 	newAgentID = "AE8B49DF-B96E-4E87-AAB9-B7B7E16B48D0"
+	// }
+	// if counter == 3 {
+	// 	newAgentID = "E44DAF38-D2E8-4DBC-9A37-29F917A7DB0F"
+	// }
+
+	mutex.Lock()
+	// open wallet account
+	var initBal float64 = common.DEFAULT_ACCOUNT_BALANCE
+	if agentType == common.NECESSITY_FIRM {
+		initBal = common.NFIRM_ACCOUNT_BALANCE
+	}
+	am.OpenWalletAccount(newAgentID, initBal)
+
+	// insert new agent
+	agent := st.InsertAgent(newAgentID, uint(agentType))
+	agent.InitAgentAssets(st)
+	mutex.Unlock()
+
+	jsInBytes, _ := json.Marshal(agent)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsInBytes)
+}
+
+// GET /agents/{AGENT_ID}
+func GetAgentByID(w http.ResponseWriter, r *http.Request, econ *Economy) {
+	st := econ.Storage
+	agentID := mux.Vars(r)["AGENT_ID"]
+	agent, err := st.GetAgentByID(agentID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	jsInBytes, _ := json.Marshal(agent)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsInBytes)
+}
+
+// PUT /agents/{AGENT_ID}
+func UpdateAgent(w http.ResponseWriter, r *http.Request, econ *Economy) {
+	st := econ.Storage
+	agentID := mux.Vars(r)["AGENT_ID"]
+	agent, err := st.GetAgentByID(agentID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	agentType := agent.GetType()
+	var agentDTO abstraction.AgentDTO
+	if agentType == common.PERSON {
+		agentDTO, err = decodePersonDTO(r)
+	} else if agentType == common.NECESSITY_FIRM {
+		agentDTO, err = decodeNecessityFirmDTO(r)
+	} else if agentType == common.CAPITAL_FIRM {
+		agentDTO, err = decodeCapitalFirmDTO(r)
+	}
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	agent.UpdateAgent(st, agentDTO)
 }
 
 // POST /agents/{AGENT_ID}/produce
@@ -148,7 +226,7 @@ func GetAgentAssets(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	w.Write(jsInBytes)
 }
 
-// POST /agents/{AGENT_ID}/wallet/balance
+// GET /agents/{AGENT_ID}/wallet/balance
 func GetWalletAccountBalance(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	am := econ.AccountManager
 	agentID := mux.Vars(r)["AGENT_ID"]
@@ -157,6 +235,21 @@ func GetWalletAccountBalance(w http.ResponseWriter, r *http.Request, econ *Econo
 		map[string]interface{}{
 			"agentId": agentID,
 			"balance": bal,
+		},
+	)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsInBytes)
+}
+
+// GET /agents/{AGENT_ID}/wallet/account
+func GetWalletAccount(w http.ResponseWriter, r *http.Request, econ *Economy) {
+	am := econ.AccountManager
+	agentID := mux.Vars(r)["AGENT_ID"]
+	walletAcc := am.GetWalletAccount(agentID)
+	jsInBytes, _ := json.Marshal(
+		map[string]interface{}{
+			"agentId":       agentID,
+			"walletAccount": walletAcc,
 		},
 	)
 	w.Header().Set("Content-Type", "application/json")

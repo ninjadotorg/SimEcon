@@ -30,11 +30,11 @@ func BuildHttpServerAddress() string {
 }
 
 func BuildJoinSimulationEndPoint(agentType uint) string {
-	return fmt.Sprintf("%s/types/%d/agents", BuildHttpServerAddress(), agentType)
+	return fmt.Sprintf("%s/types/%d/agents/join", BuildHttpServerAddress(), agentType)
 }
 
 func BuildGetWalletBalanceEndPoint(agentID string) string {
-	return fmt.Sprintf("%s/agents/%s/wallet/balance", BuildHttpServerAddress(), agentID)
+	return fmt.Sprintf("%s/agents/%s/wallet/account/balance", BuildHttpServerAddress(), agentID)
 }
 
 func BuildGetAgentAssetsEndPoint(agentID string) string {

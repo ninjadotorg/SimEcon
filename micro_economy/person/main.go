@@ -40,51 +40,59 @@ func process(
 	// produce man hours from necessity
 	// eat all necessecity
 	nAsset, _ := agentAssets[common.NECESSITY]
-	producedAgentAssets, err := common.Produce(
-		httpClient,
-		agentID,
-		map[uint]*common.Asset{common.NECESSITY: nAsset},
-	)
-	if err != nil {
-		fmt.Printf("Produce man hours from necessity error: %s\n", err.Error())
-		return
-	}
+	if nAsset.Quantity >= 1 {
+		producedAgentAssets, err := common.Produce(
+			httpClient,
+			agentID,
+			map[uint]*common.Asset{common.NECESSITY: nAsset},
+		)
+		if err != nil {
+			fmt.Printf("Produce man hours from necessity error: %s\n", err.Error())
+			return
+		}
 
-	// sell man hours
-	mhAsset, _ := producedAgentAssets[common.MAN_HOUR]
-	orderSellItem := &common.OrderItem{
-		AgentID:      agentID,
-		AssetType:    common.MAN_HOUR,
-		Quantity:     mhAsset.Quantity,
-		PricePerUnit: 20,
-	}
-	_, err = common.Order(
-		httpClient,
-		agentID,
-		orderSellItem,
-		"sell",
-	)
-	if err != nil {
-		fmt.Printf("Sell man hours error: %s\n", err.Error())
-		return
+		// sell man hours
+		mhAsset, _ := producedAgentAssets[common.MAN_HOUR]
+		if mhAsset.Quantity > 0 {
+			orderSellItem := &common.OrderItem{
+				AgentID:      agentID,
+				AssetType:    common.MAN_HOUR,
+				Quantity:     mhAsset.Quantity,
+				PricePerUnit: 20,
+			}
+			_, err = common.Order(
+				httpClient,
+				agentID,
+				orderSellItem,
+				"sell",
+			)
+			if err != nil {
+				fmt.Printf("Sell man hours error: %s\n", err.Error())
+				return
+			}
+		}
 	}
 
 	// buy necessity
-	orderBuyItem := &common.OrderItem{
-		AgentID:      agentID,
-		AssetType:    common.NECESSITY,
-		Quantity:     math.Floor(walBal / 10),
-		PricePerUnit: 10,
-	}
-	_, err = common.Order(
-		httpClient,
-		agentID,
-		orderBuyItem,
-		"buy",
-	)
-	if err != nil {
-		fmt.Printf("Buy necessity error: %s\n", err.Error())
-		return
+	nPricePerUnit := 10.0
+	nQty := math.Floor(walBal / nPricePerUnit)
+	if nQty >= 1 {
+		orderBuyItem := &common.OrderItem{
+			AgentID:      agentID,
+			AssetType:    common.NECESSITY,
+			Quantity:     nQty,
+			PricePerUnit: nPricePerUnit,
+		}
+		_, err = common.Order(
+			httpClient,
+			agentID,
+			orderBuyItem,
+			"buy",
+		)
+		if err != nil {
+			fmt.Printf("Buy necessity error: %s\n", err.Error())
+			return
+		}
 	}
 
 	fmt.Println("Everything is ok")

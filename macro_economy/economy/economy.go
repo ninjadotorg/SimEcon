@@ -52,10 +52,17 @@ func wrap(
 func (econ *Economy) Run() {
 	r := mux.NewRouter()
 
-	r.HandleFunc("/types/{AGENT_TYPE}/agents", wrap(econ, Join)).Methods("POST")
+	r.HandleFunc("/types/{AGENT_TYPE}/agents/join", wrap(econ, Join)).Methods("POST")
+	r.HandleFunc("/agents/{AGENT_ID}", wrap(econ, GetAgentByID)).Methods("GET")
+	r.HandleFunc("/agents/{AGENT_ID}", wrap(econ, UpdateAgent)).Methods("PUT")
+
 	r.HandleFunc("/agents/{AGENT_ID}/assets", wrap(econ, GetAgentAssets)).Methods("GET")
-	r.HandleFunc("/agents/{AGENT_ID}/wallet/balance", wrap(econ, GetWalletAccountBalance)).Methods("GET")
+
+	r.HandleFunc("/agents/{AGENT_ID}/wallet/account/balance", wrap(econ, GetWalletAccountBalance)).Methods("GET")
+	r.HandleFunc("/agents/{AGENT_ID}/wallet/account", wrap(econ, GetWalletAccount)).Methods("GET")
+
 	r.HandleFunc("/agents/{AGENT_ID}/produce", wrap(econ, Produce)).Methods("POST")
+
 	r.HandleFunc("/agents/{AGENT_ID}/buy", wrap(econ, Buy)).Methods("POST")
 	r.HandleFunc("/agents/{AGENT_ID}/sell", wrap(econ, Sell)).Methods("POST")
 

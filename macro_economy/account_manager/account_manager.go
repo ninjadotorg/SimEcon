@@ -2,6 +2,7 @@ package account_manager
 
 import (
 	"github.com/ninjadotorg/SimEcon/common"
+	"github.com/ninjadotorg/SimEcon/macro_economy/abstraction"
 )
 
 var accountManager *AccountManager
@@ -46,6 +47,16 @@ func (accManager *AccountManager) GetBalance(
 		return 0
 	}
 	return acc.Balance
+}
+
+func (accManager *AccountManager) GetWalletAccount(
+	agentID string,
+) abstraction.WalletAccount {
+	acc, ok := accManager.WalletAccounts[agentID]
+	if !ok {
+		return nil
+	}
+	return acc
 }
 
 func (accManager *AccountManager) PayFrom(
