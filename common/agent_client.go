@@ -34,6 +34,34 @@ type OrderResponse struct {
 	OldAssetQuantity  float64 `json:"oldAssetQuantity"`
 }
 
+type WalletAccount struct {
+	Address string
+	Balance float64 // checking/saving acc balance
+	PriIC   float64 // primary income in the last step
+	SecIC   float64 // secondary income in the last step
+}
+
+type WalletAccResp struct {
+	AgentID       string         `json:"agentId"`
+	WalletAccount *WalletAccount `json:"walletAccount"`
+}
+
+func GetWalletAccount(
+	httpClient *HttpClient,
+	agentID string,
+) (*WalletAccount, error) {
+	resp, err := httpClient.Get(BuildGetWalletAccountEndPoint(agentID))
+	if err != nil {
+		return nil, err
+	}
+	var walletAccResp WalletAccResp
+	err = HandleHttpResp(&walletAccResp, resp, err)
+	if err != nil {
+		return nil, err
+	}
+	return walletAccResp.WalletAccount, nil
+}
+
 func GetWalletBalance(
 	httpClient *HttpClient,
 	agentID string,

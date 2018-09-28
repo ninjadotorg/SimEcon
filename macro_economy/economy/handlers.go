@@ -4,15 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/ninjadotorg/SimEcon/common"
 	"github.com/ninjadotorg/SimEcon/macro_economy/abstraction"
 	"github.com/ninjadotorg/SimEcon/macro_economy/dto"
 )
-
-// TODO: will remove unnecessary mutex locks when using real DB (Redis, Couchbase, LevelDB, ...)
 
 var counter = 0
 
@@ -82,7 +79,6 @@ func decodeCapitalFirmDTO(
 // POST /types/{AGENT_TYPE}/agents
 func Join(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	counter += 1
-	var mutex = &sync.Mutex{}
 	newAgentID := common.UUID()
 
 	am := econ.AccountManager
@@ -104,7 +100,6 @@ func Join(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	// 	newAgentID = "E44DAF38-D2E8-4DBC-9A37-29F917A7DB0F"
 	// }
 
-	mutex.Lock()
 	// open wallet account
 	var initBal float64 = common.DEFAULT_ACCOUNT_BALANCE
 	if agentType == common.NECESSITY_FIRM {
@@ -115,7 +110,6 @@ func Join(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	// insert new agent
 	agent := st.InsertAgent(newAgentID, uint(agentType))
 	agent.InitAgentAssets(st)
-	mutex.Unlock()
 
 	jsInBytes, _ := json.Marshal(agent)
 	w.Header().Set("Content-Type", "application/json")
@@ -165,7 +159,6 @@ func UpdateAgent(w http.ResponseWriter, r *http.Request, econ *Economy) {
 
 // POST /agents/{AGENT_ID}/produce
 func Produce(w http.ResponseWriter, r *http.Request, econ *Economy) {
-	var mutex = &sync.Mutex{}
 	st := econ.Storage
 	prod := econ.Production
 
@@ -196,9 +189,7 @@ func Produce(w http.ResponseWriter, r *http.Request, econ *Economy) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	mutex.Lock()
 	updatedAssets, err := agentProd.Produce(st, agentID, assetsReq)
-	mutex.Unlock()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -258,7 +249,6 @@ func GetWalletAccount(w http.ResponseWriter, r *http.Request, econ *Economy) {
 
 // POST /agents/{AGENT_ID}/buy
 func Buy(w http.ResponseWriter, r *http.Request, econ *Economy) {
-	var mutex = &sync.Mutex{}
 	st := econ.Storage
 	mk := econ.Market
 	am := econ.AccountManager
@@ -304,9 +294,7 @@ func Buy(w http.ResponseWriter, r *http.Request, econ *Economy) {
 		"oldAccountBalance": accBal,
 	}
 
-	mutex.Lock()
 	remainingRequestedQty, err := mk.Buy(agentID, orderItemReq, st, am, prod)
-	mutex.Unlock()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -327,7 +315,6 @@ func Buy(w http.ResponseWriter, r *http.Request, econ *Economy) {
 
 // POST /agents/{AGENT_ID}/sell
 func Sell(w http.ResponseWriter, r *http.Request, econ *Economy) {
-	var mutex = &sync.Mutex{}
 	st := econ.Storage
 	mk := econ.Market
 	am := econ.AccountManager
@@ -369,9 +356,7 @@ func Sell(w http.ResponseWriter, r *http.Request, econ *Economy) {
 		"oldAssetQuantity":  curAsset.GetQuantity(),
 		"oldAccountBalance": accBal,
 	}
-	mutex.Lock()
 	remainingRequestedQty, err := mk.Sell(agentID, orderItemReq, st, am, prod)
-	mutex.Unlock()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

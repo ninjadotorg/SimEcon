@@ -1,6 +1,8 @@
 package account_manager
 
 import (
+	"sync"
+
 	"github.com/ninjadotorg/SimEcon/common"
 	"github.com/ninjadotorg/SimEcon/macro_economy/abstraction"
 )
@@ -8,6 +10,7 @@ import (
 var accountManager *AccountManager
 
 type AccountManager struct {
+	locker         *sync.RWMutex
 	WalletAccounts map[string]*WalletAccount
 	// TODO: bankbook
 }
@@ -17,6 +20,7 @@ func GetAccountManagerInstance() *AccountManager {
 		return accountManager
 	}
 	accountManager = &AccountManager{
+		locker:         &sync.RWMutex{},
 		WalletAccounts: map[string]*WalletAccount{},
 	}
 	return accountManager
@@ -26,6 +30,8 @@ func (accManager *AccountManager) OpenWalletAccount(
 	agentID string,
 	balance float64,
 ) {
+	accManager.locker.Lock()
+	defer accManager.locker.Unlock()
 	newAddress := common.UUID()
 	acc := NewWalletAccount(newAddress, balance)
 	accManager.WalletAccounts[agentID] = acc
@@ -34,6 +40,8 @@ func (accManager *AccountManager) OpenWalletAccount(
 func (accManager *AccountManager) CloseWalletAccount(
 	agentID string,
 ) {
+	accManager.locker.Lock()
+	defer accManager.locker.Unlock()
 	if _, ok := accManager.WalletAccounts[agentID]; ok {
 		delete(accManager.WalletAccounts, agentID)
 	}
@@ -42,6 +50,8 @@ func (accManager *AccountManager) CloseWalletAccount(
 func (accManager *AccountManager) GetBalance(
 	agentID string,
 ) float64 {
+	accManager.locker.RLock()
+	defer accManager.locker.RUnlock()
 	acc, ok := accManager.WalletAccounts[agentID]
 	if !ok {
 		return 0
@@ -52,6 +62,8 @@ func (accManager *AccountManager) GetBalance(
 func (accManager *AccountManager) GetWalletAccount(
 	agentID string,
 ) abstraction.WalletAccount {
+	accManager.locker.RLock()
+	defer accManager.locker.RUnlock()
 	acc, ok := accManager.WalletAccounts[agentID]
 	if !ok {
 		return nil
@@ -63,6 +75,8 @@ func (accManager *AccountManager) PayFrom(
 	payerID string,
 	amt float64,
 ) {
+	accManager.locker.Lock()
+	defer accManager.locker.Unlock()
 	fromAcc := accManager.WalletAccounts[payerID]
 	// if fromAcc.Balance < amt { // TODO: will handle this case later
 
@@ -75,6 +89,8 @@ func (accManager *AccountManager) PayTo(
 	amt float64,
 	purpose int, // either PRIIC or SECIC
 ) {
+	accManager.locker.Lock()
+	defer accManager.locker.Unlock()
 	toAcc := accManager.WalletAccounts[payeeID]
 	toAcc.Balance += amt
 	if purpose == common.PRIIC {
@@ -90,6 +106,8 @@ func (accManager *AccountManager) Pay(
 	amt float64,
 	purpose int, // either PRIIC or SECIC
 ) {
+	accManager.locker.Lock()
+	defer accManager.locker.Unlock()
 	fromAcc := accManager.WalletAccounts[payerID]
 	toAcc := accManager.WalletAccounts[payeeID]
 

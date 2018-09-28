@@ -125,7 +125,7 @@ func run() {
 	)
 
 	// Agent re-calculates every 60s
-	deplayTimeInSec, _ := strconv.Atoi(common.GetEnv("DELAY_TIME_IN_SEC", "600"))
+	deplayTimeInSec, _ := strconv.Atoi(common.GetEnv("DELAY_TIME_IN_SEC", "40"))
 	for {
 		fmt.Println("Hello there again!!!")
 		for _, agentID := range agentIDs {

@@ -37,6 +37,10 @@ func BuildGetWalletBalanceEndPoint(agentID string) string {
 	return fmt.Sprintf("%s/agents/%s/wallet/account/balance", BuildHttpServerAddress(), agentID)
 }
 
+func BuildGetWalletAccountEndPoint(agentID string) string {
+	return fmt.Sprintf("%s/agents/%s/wallet/account", BuildHttpServerAddress(), agentID)
+}
+
 func BuildGetAgentAssetsEndPoint(agentID string) string {
 	return fmt.Sprintf("%s/agents/%s/assets", BuildHttpServerAddress(), agentID)
 }

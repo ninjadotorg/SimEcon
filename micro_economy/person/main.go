@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	NUMBER_OF_AGENTS     = 3
+	NUMBER_OF_AGENTS     = 10
 	AGENT_TYPE           = 1
 	PERSISTENT_FILE_PATH = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/micro_economy/person/persistent.json"
 )
@@ -23,12 +23,14 @@ func process(
 	httpClient *common.HttpClient,
 	agentID string,
 ) {
-	// get wallet balance
-	walBal, err := common.GetWalletBalance(httpClient, agentID)
+	// get wallet account
+	walAcc, err := common.GetWalletAccount(httpClient, agentID)
 	if err != nil {
 		fmt.Printf("Get wallet balance error: %s\n", err.Error())
 		return
 	}
+
+	walBal := walAcc.Balance
 
 	// get assets
 	agentAssets, err := common.GetAgentAssets(httpClient, agentID)
@@ -108,7 +110,7 @@ func run() {
 	)
 
 	// Agent re-calculates every 60s
-	deplayTimeInSec, _ := strconv.Atoi(common.GetEnv("DELAY_TIME_IN_SEC", "600"))
+	deplayTimeInSec, _ := strconv.Atoi(common.GetEnv("DELAY_TIME_IN_SEC", "45"))
 	for {
 		fmt.Println("Hello there again!!!")
 		for _, agentID := range agentIDs {

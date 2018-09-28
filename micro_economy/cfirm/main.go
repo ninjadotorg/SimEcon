@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	NUMBER_OF_AGENTS     = 1
+	NUMBER_OF_AGENTS     = 4
 	AGENT_TYPE           = 3
 	PERSISTENT_FILE_PATH = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/micro_economy/cfirm/persistent.json"
 )
@@ -99,7 +99,7 @@ func run() {
 	)
 
 	// Agent re-calculates every 60s
-	deplayTimeInSec, _ := strconv.Atoi(common.GetEnv("DELAY_TIME_IN_SEC", "600"))
+	deplayTimeInSec, _ := strconv.Atoi(common.GetEnv("DELAY_TIME_IN_SEC", "30"))
 	for {
 		fmt.Println("Hello there again!!!")
 		for _, agentID := range agentIDs {
