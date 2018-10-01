@@ -206,6 +206,38 @@ func (st *Storage) GetSortedAsksByAssetType(
 	return orderItems.SortOrderItems(isDesc)
 }
 
+func (st *Storage) GetTotalAsksByAssetType(
+	assetType uint,
+) float64 {
+	st.locker.RLock()
+	defer st.locker.RUnlock()
+	asksByType, ok := st.Asks[assetType]
+	if !ok {
+		return 0.0
+	}
+	totalAsks := 0.0
+	for _, orderItem := range asksByType {
+		totalAsks += orderItem.GetQuantity()
+	}
+	return totalAsks
+}
+
+func (st *Storage) GetTotalBidsByAssetType(
+	assetType uint,
+) float64 {
+	st.locker.RLock()
+	defer st.locker.RUnlock()
+	bidsByType, ok := st.Bids[assetType]
+	if !ok {
+		return 0.0
+	}
+	totalBids := 0.0
+	for _, orderItem := range bidsByType {
+		totalBids += orderItem.GetQuantity()
+	}
+	return totalBids
+}
+
 func (st *Storage) RemoveAsksByAgentIDs(
 	agentIDs []string,
 	assetType uint,

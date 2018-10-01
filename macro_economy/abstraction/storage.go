@@ -13,4 +13,6 @@ type Storage interface {
 	GetSortedAsksByAssetType(uint, bool) OrderItems
 	RemoveAsksByAgentIDs([]string, uint) error
 	AppendBid(uint, string, float64, float64)
+	GetTotalAsksByAssetType(uint) float64
+	GetTotalBidsByAssetType(uint) float64
 }

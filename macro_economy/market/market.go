@@ -1,7 +1,9 @@
 package market
 
 import (
+	"fmt"
 	"math"
+	"time"
 
 	"github.com/ninjadotorg/SimEcon/common"
 	"github.com/ninjadotorg/SimEcon/macro_economy/abstraction"
@@ -27,6 +29,7 @@ func (m *Market) Buy(
 	st abstraction.Storage,
 	am abstraction.AccountManager,
 	prod abstraction.Production,
+	tr abstraction.Tracker,
 ) (float64, error) {
 	sortedBidsByAssetType := st.GetSortedBidsByAssetType(orderItemReq.AssetType, false)
 
@@ -86,6 +89,13 @@ func (m *Market) Buy(
 			orderItemReq.Quantity,
 			orderItemReq.PricePerUnit,
 		)
+		totalAsks := st.GetTotalAsksByAssetType(orderItemReq.AssetType)
+		record := []string{fmt.Sprintf("%d", time.Now().Unix()), fmt.Sprintf("%.1f", totalAsks)}
+
+		err := tr.WriteToCSV(fmt.Sprintf("%s_%d.csv", common.TOTAL_ASKS_FILE, orderItemReq.AssetType), record)
+		if err != nil {
+			return orderItemReq.Quantity, err
+		}
 	}
 
 	return orderItemReq.Quantity, nil
@@ -97,6 +107,7 @@ func (m *Market) Sell(
 	st abstraction.Storage,
 	am abstraction.AccountManager,
 	prod abstraction.Production,
+	tr abstraction.Tracker,
 ) (float64, error) {
 	sortedAsksByAssetType := st.GetSortedAsksByAssetType(orderItemReq.AssetType, false)
 
@@ -165,6 +176,13 @@ func (m *Market) Sell(
 			orderItemReq.Quantity,
 			orderItemReq.PricePerUnit,
 		)
+		totalBids := st.GetTotalBidsByAssetType(orderItemReq.AssetType)
+		record := []string{fmt.Sprintf("%d", time.Now().Unix()), fmt.Sprintf("%.1f", totalBids)}
+		fmt.Println("Record: ", record)
+		err := tr.WriteToCSV(fmt.Sprintf("%s_%d.csv", common.TOTAL_BIDS_FILE, orderItemReq.AssetType), record)
+		if err != nil {
+			return orderItemReq.Quantity, err
+		}
 	}
 
 	return orderItemReq.Quantity, nil

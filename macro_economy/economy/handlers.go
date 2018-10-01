@@ -253,6 +253,7 @@ func Buy(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	mk := econ.Market
 	am := econ.AccountManager
 	prod := econ.Production
+	tr := econ.Tracker
 
 	agentID := mux.Vars(r)["AGENT_ID"]
 	var orderItemReq *dto.OrderItem
@@ -294,7 +295,7 @@ func Buy(w http.ResponseWriter, r *http.Request, econ *Economy) {
 		"oldAccountBalance": accBal,
 	}
 
-	remainingRequestedQty, err := mk.Buy(agentID, orderItemReq, st, am, prod)
+	remainingRequestedQty, err := mk.Buy(agentID, orderItemReq, st, am, prod, tr)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -319,6 +320,7 @@ func Sell(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	mk := econ.Market
 	am := econ.AccountManager
 	prod := econ.Production
+	tr := econ.Tracker
 
 	agentID := mux.Vars(r)["AGENT_ID"]
 	var orderItemReq *dto.OrderItem
@@ -356,7 +358,7 @@ func Sell(w http.ResponseWriter, r *http.Request, econ *Economy) {
 		"oldAssetQuantity":  curAsset.GetQuantity(),
 		"oldAccountBalance": accBal,
 	}
-	remainingRequestedQty, err := mk.Sell(agentID, orderItemReq, st, am, prod)
+	remainingRequestedQty, err := mk.Sell(agentID, orderItemReq, st, am, prod, tr)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

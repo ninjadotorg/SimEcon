@@ -6,6 +6,7 @@ import (
 	"github.com/ninjadotorg/SimEcon/macro_economy/market"
 	"github.com/ninjadotorg/SimEcon/macro_economy/production"
 	"github.com/ninjadotorg/SimEcon/macro_economy/storage"
+	"github.com/ninjadotorg/SimEcon/macro_economy/tracker"
 )
 
 func main() {
@@ -13,6 +14,7 @@ func main() {
 	ac := account_manager.GetAccountManagerInstance()
 	prod := production.GetProductionInstance()
 	m := market.GetMarketInstance()
-	econ := economy.GetEconomyInstance(ac, st, prod, m)
+	tr := tracker.GetTrackerInstance()
+	econ := economy.GetEconomyInstance(ac, st, prod, m, tr)
 	econ.Run()
 }

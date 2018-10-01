@@ -37,4 +37,8 @@ const (
 	// init account balance
 	DEFAULT_ACCOUNT_BALANCE = 0
 	NFIRM_ACCOUNT_BALANCE   = 50
+
+	// tracking path
+	TOTAL_ASKS_FILE = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/macro_economy/market/total_asks"
+	TOTAL_BIDS_FILE = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/macro_economy/market/total_bids"
 )
