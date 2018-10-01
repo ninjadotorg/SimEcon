@@ -36,7 +36,12 @@ const (
 
 	// init account balance
 	DEFAULT_ACCOUNT_BALANCE = 0
-	NFIRM_ACCOUNT_BALANCE   = 50
+	NFIRM_ACCOUNT_BALANCE   = 500
+
+	// baseline of assets' price
+	NECESSITY_PRICE_BASELINE = 5
+	CAPITAL_PRICE_BASELINE   = 12
+	MAN_HOUR_PRICE_BASELINE  = 8
 
 	// tracking path
 	TOTAL_ASKS_FILE = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/macro_economy/market/total_asks"

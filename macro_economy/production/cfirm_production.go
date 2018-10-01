@@ -27,7 +27,7 @@ func (cfp *CFirmProduction) Produce(
 	if spendingAmt > curMHAsset.GetQuantity() {
 		spendingAmt = curMHAsset.GetQuantity()
 	}
-	convertedCAmt := convertLinearly(spendingAmt, 0.75) // TODO
+	convertedCAmt := convertLinearly(spendingAmt, 1) // TODO
 	curCAsset.SetQuantity(convertedCAmt + curCAsset.GetQuantity())
 	curCAsset.SetProducedTime()
 

@@ -3,6 +3,7 @@ package production
 import (
 	"errors"
 	"math"
+	"math/rand"
 	"time"
 
 	"github.com/ninjadotorg/SimEcon/common"
@@ -60,7 +61,8 @@ func computeDecayManHours(asset abstraction.Asset) abstraction.Asset {
 }
 
 func convertLinearly(input float64, a float64) float64 {
-	return a * input
+	epRand := (rand.Float64() * 85) + 30
+	return a * input * epRand / 100
 }
 
 func (prod *Production) GetProductionByAgentType(

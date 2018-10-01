@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"os"
 	"os/signal"
 	"runtime"
@@ -42,7 +43,7 @@ func process(
 	// produce man hours from necessity
 	// eat all necessecity
 	nAsset, _ := agentAssets[common.NECESSITY]
-	if nAsset.Quantity >= 1 {
+	if nAsset.Quantity > 0 {
 		producedAgentAssets, err := common.Produce(
 			httpClient,
 			agentID,
@@ -60,7 +61,7 @@ func process(
 				AgentID:      agentID,
 				AssetType:    common.MAN_HOUR,
 				Quantity:     mhAsset.Quantity,
-				PricePerUnit: 20,
+				PricePerUnit: common.MAN_HOUR_PRICE_BASELINE * ((rand.Float64() * 80) + 40) / 100,
 			}
 			_, err = common.Order(
 				httpClient,
@@ -76,7 +77,7 @@ func process(
 	}
 
 	// buy necessity
-	nPricePerUnit := 10.0
+	nPricePerUnit := common.NECESSITY_PRICE_BASELINE * ((rand.Float64() * 80) + 40) / 100
 	nQty := math.Floor(walBal / nPricePerUnit)
 	if nQty >= 1 {
 		orderBuyItem := &common.OrderItem{
@@ -97,7 +98,7 @@ func process(
 		}
 	}
 
-	fmt.Println("Everything is ok")
+	fmt.Printf("Finished the session for agent: %s\n", agentID)
 }
 
 func run() {

@@ -26,7 +26,7 @@ func (pp *PersonProduction) Produce(
 	if spendingAmt > curNAsset.GetQuantity() {
 		spendingAmt = curNAsset.GetQuantity()
 	}
-	convertedMHAmt := convertLinearly(spendingAmt, 2.5)
+	convertedMHAmt := convertLinearly(spendingAmt, 1)
 	curMHAsset.SetQuantity(convertedMHAmt + curMHAsset.GetQuantity())
 	curMHAsset.SetProducedTime()
 

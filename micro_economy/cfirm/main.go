@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"os"
 	"os/signal"
 	"runtime"
@@ -39,54 +40,60 @@ func process(
 
 	// produce capital from man hours
 	mhAsset, _ := agentAssets[common.MAN_HOUR]
-	producedAgentAssets, err := common.Produce(
-		httpClient,
-		agentID,
-		map[uint]*common.Asset{common.MAN_HOUR: mhAsset},
-	)
-	if err != nil {
-		fmt.Printf("Produce capital from man hours error: %s\n", err.Error())
-		return
-	}
+	if mhAsset.Quantity > 0 {
+		producedAgentAssets, err := common.Produce(
+			httpClient,
+			agentID,
+			map[uint]*common.Asset{common.MAN_HOUR: mhAsset},
+		)
+		if err != nil {
+			fmt.Printf("Produce capital from man hours error: %s\n", err.Error())
+			return
+		}
 
-	// sell capital
-	cAsset, _ := producedAgentAssets[common.CAPITAL]
-	orderSellItem := &common.OrderItem{
-		AgentID:      agentID,
-		AssetType:    common.CAPITAL,
-		Quantity:     cAsset.Quantity,
-		PricePerUnit: 15,
-	}
-	_, err = common.Order(
-		httpClient,
-		agentID,
-		orderSellItem,
-		"sell",
-	)
-	if err != nil {
-		fmt.Printf("Sell capital error: %s\n", err.Error())
-		return
+		// sell capital
+		cAsset, _ := producedAgentAssets[common.CAPITAL]
+		orderSellItem := &common.OrderItem{
+			AgentID:      agentID,
+			AssetType:    common.CAPITAL,
+			Quantity:     cAsset.Quantity,
+			PricePerUnit: common.CAPITAL_PRICE_BASELINE * ((rand.Float64() * 80) + 40) / 100,
+		}
+		_, err = common.Order(
+			httpClient,
+			agentID,
+			orderSellItem,
+			"sell",
+		)
+		if err != nil {
+			fmt.Printf("Sell capital error: %s\n", err.Error())
+			return
+		}
 	}
 
 	// buy man hours
-	orderBuyItem := &common.OrderItem{
-		AgentID:      agentID,
-		AssetType:    common.MAN_HOUR,
-		Quantity:     math.Floor(walBal / 21),
-		PricePerUnit: 21,
-	}
-	_, err = common.Order(
-		httpClient,
-		agentID,
-		orderBuyItem,
-		"buy",
-	)
-	if err != nil {
-		fmt.Printf("Buy man hours error: %s\n", err.Error())
-		return
+	mhPricePerUnit := common.MAN_HOUR_PRICE_BASELINE * ((rand.Float64() * 80) + 40) / 100
+	mhQty := math.Floor(walBal / mhPricePerUnit)
+	if mhQty >= 1 {
+		orderBuyItem := &common.OrderItem{
+			AgentID:      agentID,
+			AssetType:    common.MAN_HOUR,
+			Quantity:     mhQty,
+			PricePerUnit: mhPricePerUnit,
+		}
+		_, err = common.Order(
+			httpClient,
+			agentID,
+			orderBuyItem,
+			"buy",
+		)
+		if err != nil {
+			fmt.Printf("Buy man hours error: %s\n", err.Error())
+			return
+		}
 	}
 
-	fmt.Println("Everything is ok")
+	fmt.Printf("Finished the session for agent: %s\n", agentID)
 }
 
 func run() {

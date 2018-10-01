@@ -37,7 +37,7 @@ func (nfp *NFirmProduction) Produce(
 
 	// TODO: define convertion formula
 	input := (spendingMHAmt + spendingCAmt) / 2
-	convertedNAmt := convertLinearly(input, 1.5)
+	convertedNAmt := convertLinearly(input, 5)
 
 	curNAsset.SetQuantity(convertedNAmt + curNAsset.GetQuantity())
 	curNAsset.SetProducedTime()
