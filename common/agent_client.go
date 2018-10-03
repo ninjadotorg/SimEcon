@@ -86,13 +86,11 @@ func GetAgentAssets(
 	agentID string,
 ) (map[uint]*Asset, error) {
 	resp, err := httpClient.Get(BuildGetAgentAssetsEndPoint(agentID))
-	fmt.Println("First: ", err)
 	if err != nil {
 		return nil, err
 	}
 	var agentAssetsResp map[uint]*Asset
 	err = HandleHttpResp(&agentAssetsResp, resp, err)
-	fmt.Println("Sec: ", err)
 	if err != nil {
 		return nil, err
 	}

@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	NUMBER_OF_AGENTS     = 3
+	NUMBER_OF_AGENTS     = 16
 	AGENT_TYPE           = 2
 	PERSISTENT_FILE_PATH = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/micro_economy/nfirm/persistent.json"
 )
@@ -73,6 +73,32 @@ func process(
 			fmt.Printf("Sell necessity error: %s\n", err.Error())
 			return
 		}
+	} else {
+		agentAssets, err := common.GetAgentAssets(httpClient, agentID)
+		if err != nil {
+			fmt.Printf("Get agent assets error: %s\n", err.Error())
+			return
+		}
+		// sell necessity
+		nAsset, _ := agentAssets[common.NECESSITY]
+		if nAsset.Quantity > 0 {
+			orderSellItem := &common.OrderItem{
+				AgentID:      agentID,
+				AssetType:    common.NECESSITY,
+				Quantity:     nAsset.Quantity,
+				PricePerUnit: common.NECESSITY_PRICE_BASELINE * ((rand.Float64() * 80) + 40) / 100,
+			}
+			_, err = common.Order(
+				httpClient,
+				agentID,
+				orderSellItem,
+				"sell",
+			)
+			if err != nil {
+				fmt.Printf("Sell necessity error: %s\n", err.Error())
+				return
+			}
+		}
 	}
 
 	// buy capital
@@ -105,7 +131,7 @@ func process(
 	if mhQty > 0 {
 		orderBuyManHour := &common.OrderItem{
 			AgentID:      agentID,
-			AssetType:    common.CAPITAL,
+			AssetType:    common.MAN_HOUR,
 			Quantity:     mhQty,
 			PricePerUnit: pricePerManHour,
 		}
@@ -133,8 +159,10 @@ func run() {
 		AGENT_TYPE,
 	)
 
+	rand_interval := rand.Intn(4) + 2
+	// rand_interval := 600
 	// Agent re-calculates every 60s
-	deplayTimeInSec, _ := strconv.Atoi(common.GetEnv("DELAY_TIME_IN_SEC", "40"))
+	deplayTimeInSec, _ := strconv.Atoi(common.GetEnv("DELAY_TIME_IN_SEC", fmt.Sprintf("%d", rand_interval)))
 	for {
 		fmt.Println("Hello there again!!!")
 		for _, agentID := range agentIDs {

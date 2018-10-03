@@ -89,6 +89,11 @@ func (m *Market) Buy(
 			orderItemReq.Quantity,
 			orderItemReq.PricePerUnit,
 		)
+		fmt.Println("----Ask----")
+		fmt.Println("Asset type: ", orderItemReq.AssetType)
+		fmt.Println("Agent ID: ", orderItemReq.AgentID)
+		fmt.Println("Quantity: ", orderItemReq.Quantity)
+		fmt.Println("PricePerUnit: ", orderItemReq.PricePerUnit)
 		totalAsks := st.GetTotalAsksByAssetType(orderItemReq.AssetType)
 		record := []string{fmt.Sprintf("%d", time.Now().Unix()), fmt.Sprintf("%.1f", totalAsks)}
 
@@ -176,6 +181,11 @@ func (m *Market) Sell(
 			orderItemReq.Quantity,
 			orderItemReq.PricePerUnit,
 		)
+		fmt.Println("----Bid----")
+		fmt.Println("Asset type: ", orderItemReq.AssetType)
+		fmt.Println("Agent ID: ", orderItemReq.AgentID)
+		fmt.Println("Quantity: ", orderItemReq.Quantity)
+		fmt.Println("PricePerUnit: ", orderItemReq.PricePerUnit)
 		totalBids := st.GetTotalBidsByAssetType(orderItemReq.AssetType)
 		record := []string{fmt.Sprintf("%d", time.Now().Unix()), fmt.Sprintf("%.1f", totalBids)}
 		fmt.Println("Record: ", record)
