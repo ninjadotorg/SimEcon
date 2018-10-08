@@ -2,6 +2,8 @@ package economy
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -105,7 +107,7 @@ func Join(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	if agentType == common.NECESSITY_FIRM {
 		initBal = common.NFIRM_ACCOUNT_BALANCE
 	}
-	am.OpenWalletAccount(newAgentID, initBal)
+	am.OpenWalletAccount(newAgentID, initBal, 0)
 
 	// insert new agent
 	agent := st.InsertAgent(newAgentID, uint(agentType))
@@ -218,19 +220,19 @@ func GetAgentAssets(w http.ResponseWriter, r *http.Request, econ *Economy) {
 }
 
 // GET /agents/{AGENT_ID}/wallet/balance
-func GetWalletAccountBalance(w http.ResponseWriter, r *http.Request, econ *Economy) {
-	am := econ.AccountManager
-	agentID := mux.Vars(r)["AGENT_ID"]
-	bal := am.GetBalance(agentID)
-	jsInBytes, _ := json.Marshal(
-		map[string]interface{}{
-			"agentId": agentID,
-			"balance": bal,
-		},
-	)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsInBytes)
-}
+// func GetWalletAccountBalance(w http.ResponseWriter, r *http.Request, econ *Economy) {
+// 	am := econ.AccountManager
+// 	agentID := mux.Vars(r)["AGENT_ID"]
+// 	bal := am.GetBalance(agentID)
+// 	jsInBytes, _ := json.Marshal(
+// 		map[string]interface{}{
+// 			"agentId": agentID,
+// 			"balance": bal,
+// 		},
+// 	)
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.Write(jsInBytes)
+// }
 
 // GET /agents/{AGENT_ID}/wallet/account
 func GetWalletAccount(w http.ResponseWriter, r *http.Request, econ *Economy) {
@@ -271,7 +273,7 @@ func Buy(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	}
 
 	curAsset := prod.GetActualAsset(agentAsset)
-	accBal := am.GetBalance(agentID)
+	accBal := am.GetBalance(agentID, common.COIN)
 	reqQty := orderItemReq.Quantity
 
 	// validate if coin balance is enough for the order or not?
@@ -307,7 +309,7 @@ func Buy(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	curAsset.SetQuantity(newAssetQuantity)
 	st.UpdateAsset(agentID, curAsset)
 
-	res["newAccountBalance"] = am.GetBalance(agentID)
+	res["newAccountBalance"] = am.GetBalance(agentID, common.COIN)
 	res["newAssetQuantity"] = newAssetQuantity
 	jsInBytes, _ := json.Marshal(res)
 	w.Header().Set("Content-Type", "application/json")
@@ -352,7 +354,7 @@ func Sell(w http.ResponseWriter, r *http.Request, econ *Economy) {
 		return
 	}
 
-	accBal := am.GetBalance(agentID)
+	accBal := am.GetBalance(agentID, common.COIN)
 	res := map[string]interface{}{
 		"message":           "Process sell order successfully.",
 		"oldAssetQuantity":  curAsset.GetQuantity(),
@@ -369,10 +371,120 @@ func Sell(w http.ResponseWriter, r *http.Request, econ *Economy) {
 	curAsset.SetQuantity(newAssetQuantity)
 	st.UpdateAsset(agentID, curAsset)
 
-	res["newAccountBalance"] = am.GetBalance(agentID)
+	res["newAccountBalance"] = am.GetBalance(agentID, common.COIN)
 	res["newAssetQuantity"] = newAssetQuantity
 	jsInBytes, _ := json.Marshal(res)
 
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsInBytes)
+}
+
+// POST /agents/{AGENT_ID}/stabilize
+func Stabilize(w http.ResponseWriter, r *http.Request, econ *Economy) {
+	fmt.Println("Process stabilization")
+	st := econ.Storage
+	mk := econ.Market
+	am := econ.AccountManager
+	tr := econ.Tracker
+	agentID := mux.Vars(r)["AGENT_ID"]
+	var actionParamReq *dto.ActionParam
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&actionParamReq)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	st.InsertParam(agentID, actionParamReq.Delta, actionParamReq.Tax)
+	decidedParam := st.ComputeDecidedParam()
+	decidedDelta := decidedParam.GetDelta()
+	if decidedDelta == 0 {
+		res := map[string]interface{}{
+			"message": "Final decision: Do nothing.",
+		}
+		jsInBytes, _ := json.Marshal(res)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsInBytes)
+		return
+	}
+
+	var orderItem *dto.OrderItem
+	if decidedDelta > 0 { // issuing coins
+		orderItem = &dto.OrderItem{
+			AgentID:   common.DEFAULT_AGENT_ID,
+			AssetType: common.COIN,
+			Quantity:  decidedDelta,
+		}
+	} else {
+		orderItem = &dto.OrderItem{
+			AgentID:   common.DEFAULT_AGENT_ID,
+			AssetType: common.BOND,
+			Quantity:  math.Abs(decidedDelta),
+		}
+	}
+	remainingRequestedQty, err := mk.SellTokens(orderItem, st, am, tr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	res := map[string]interface{}{
+		"message":          "Process issuing/contracting coins successfully.",
+		"oldAssetQuantity": math.Abs(decidedDelta),
+		"newAssetQuantity": remainingRequestedQty,
+	}
+	jsInBytes, _ := json.Marshal(res)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsInBytes)
+}
+
+// POST /agents/{AGENT_ID}/tokens/buy
+func BuyTokens(w http.ResponseWriter, r *http.Request, econ *Economy) {
+	st := econ.Storage
+	mk := econ.Market
+	am := econ.AccountManager
+	tr := econ.Tracker
+	agentID := mux.Vars(r)["AGENT_ID"]
+	var orderItemReq *dto.OrderItem
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&orderItemReq)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	remainingRequestedQty, err := mk.BuyTokens(agentID, orderItemReq, st, am, tr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	res := map[string]interface{}{
+		"message":          "Process issuing/contracting coins successfully.",
+		"oldAssetQuantity": orderItemReq.Quantity,
+		"newAssetQuantity": remainingRequestedQty,
+	}
+	jsInBytes, _ := json.Marshal(res)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsInBytes)
+}
+
+// GET /economy/coins/price
+func GetCoinPrice(w http.ResponseWriter, r *http.Request, econ *Economy) {
+	coinPrice := 1
+	res := map[string]interface{}{
+		"coinPrice": coinPrice,
+	}
+	jsInBytes, _ := json.Marshal(res)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsInBytes)
+}
+
+// GET /economy/tokens/totals
+func GetTotalTokens(w http.ResponseWriter, r *http.Request, econ *Economy) {
+	am := econ.AccountManager
+	totalTokens := am.ComputeTotalTokens()
+	jsInBytes, _ := json.Marshal(totalTokens)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsInBytes)
 }

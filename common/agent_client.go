@@ -8,6 +8,11 @@ import (
 	"os"
 )
 
+type ActionParam struct {
+	Delta float64 `json:"delta"`
+	Tax   float64 `json:"tax"`
+}
+
 type PersistedContent struct {
 	AgentIDs []string `json:"agentIds"`
 }
@@ -36,7 +41,8 @@ type OrderResponse struct {
 
 type WalletAccount struct {
 	Address string
-	Balance float64 // checking/saving acc balance
+	Coins   float64
+	Bonds   float64
 	PriIC   float64 // primary income in the last step
 	SecIC   float64 // secondary income in the last step
 }
@@ -44,6 +50,45 @@ type WalletAccount struct {
 type WalletAccResp struct {
 	AgentID       string         `json:"agentId"`
 	WalletAccount *WalletAccount `json:"walletAccount"`
+}
+
+type CoinPriceResp struct {
+	CoinPrice float64 `json:"coinPrice"`
+}
+
+type TotalTokensResp struct {
+	TotalCoins float64 `json:"totalCoins"`
+	TotalBonds float64 `json:"totalBonds"`
+}
+
+func GetTotalTokens(
+	httpClient *HttpClient,
+) (*TotalTokensResp, error) {
+	resp, err := httpClient.Get(BuildGetTotalTokensEndPoint())
+	if err != nil {
+		return nil, err
+	}
+	var totalTokensResp TotalTokensResp
+	err = HandleHttpResp(&totalTokensResp, resp, err)
+	if err != nil {
+		return nil, err
+	}
+	return &totalTokensResp, nil
+}
+
+func GetCoinPrice(
+	httpClient *HttpClient,
+) (float64, error) {
+	resp, err := httpClient.Get(BuildGetCoinPriceEndPoint())
+	if err != nil {
+		return 0, err
+	}
+	var coinPriceResp CoinPriceResp
+	err = HandleHttpResp(&coinPriceResp, resp, err)
+	if err != nil {
+		return 0, err
+	}
+	return coinPriceResp.CoinPrice, nil
 }
 
 func GetWalletAccount(
@@ -129,8 +174,9 @@ func Order(
 	orderType string,
 ) (*OrderResponse, error) {
 	orderMap := map[string]func(string) string{
-		"buy":  BuildBuyEndPoint,
-		"sell": BuildSellEndPoint,
+		"buy":       BuildBuyEndPoint,
+		"sell":      BuildSellEndPoint,
+		"buyTokens": BuildBuyTokensEndPoint,
 	}
 	payloadInBytes, err := json.Marshal(orderItem)
 	if err != nil {
@@ -200,4 +246,30 @@ func GetAgentIDs(
 		ioutil.WriteFile(persistentFile, fileContent, 0644)
 	}
 	return agentIDs
+}
+
+func Stabilize(
+	httpClient *HttpClient,
+	agentID string,
+	actionParam *ActionParam,
+) (*OrderResponse, error) {
+	payloadInBytes, err := json.Marshal(actionParam)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := httpClient.Post(
+		BuildStabilizeEndPoint(agentID),
+		"application/json",
+		bytes.NewBuffer(payloadInBytes),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var orderResponse *OrderResponse
+	err = HandleHttpResp(&orderResponse, resp, err)
+	if err != nil {
+		return nil, err
+	}
+	return orderResponse, nil
 }

@@ -37,6 +37,10 @@ func (c *CapitalFirm) GetType() uint {
 	return c.Type
 }
 
+func (c *CapitalFirm) GetAgentID() string {
+	return c.AgentID
+}
+
 func (c *CapitalFirm) UpdateAgent(
 	st abstraction.Storage,
 	agentDTO abstraction.AgentDTO,

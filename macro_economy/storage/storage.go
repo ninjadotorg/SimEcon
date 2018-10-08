@@ -10,11 +10,12 @@ import (
 )
 
 type Storage struct {
-	locker *sync.RWMutex
-	Agents map[string]abstraction.Agent
-	Assets map[string]map[uint]abstraction.Asset     // agentID -> assetID -> asset
-	Asks   map[uint]map[string]abstraction.OrderItem // assetType -> agentID -> orderItem
-	Bids   map[uint]map[string]abstraction.OrderItem
+	locker       *sync.RWMutex
+	Agents       map[string]abstraction.Agent
+	Assets       map[string]map[uint]abstraction.Asset     // agentID -> assetID -> asset
+	Asks         map[uint]map[string]abstraction.OrderItem // assetType -> agentID -> orderItem
+	Bids         map[uint]map[string]abstraction.OrderItem
+	ActionParams map[string]abstraction.ActionParam
 }
 
 var storage *Storage
@@ -24,11 +25,12 @@ func GetStorageInstance() *Storage {
 		return storage
 	}
 	storage = &Storage{
-		locker: &sync.RWMutex{},
-		Agents: map[string]abstraction.Agent{},
-		Assets: map[string]map[uint]abstraction.Asset{},
-		Asks:   map[uint]map[string]abstraction.OrderItem{},
-		Bids:   map[uint]map[string]abstraction.OrderItem{},
+		locker:       &sync.RWMutex{},
+		Agents:       map[string]abstraction.Agent{},
+		Assets:       map[string]map[uint]abstraction.Asset{},
+		Asks:         map[uint]map[string]abstraction.OrderItem{},
+		Bids:         map[uint]map[string]abstraction.OrderItem{},
+		ActionParams: map[string]abstraction.ActionParam{},
 	}
 	return storage
 }
@@ -52,6 +54,14 @@ func (st *Storage) InsertAgent(
 		}
 	} else if agentType == common.CAPITAL_FIRM {
 		newAgent = &CapitalFirm{
+			agent,
+		}
+	} else if agentType == common.MINER {
+		newAgent = &Miner{
+			agent,
+		}
+	} else if agentType == common.PRICE_STABILITY {
+		newAgent = &PriceStability{
 			agent,
 		}
 	}
@@ -132,6 +142,7 @@ func (st *Storage) GetAgentAsset(
 func (st *Storage) GetSortedBidsByAssetType(
 	assetType uint,
 	isDesc bool,
+	sortBy uint,
 ) abstraction.OrderItems {
 	st.locker.Lock()
 	defer st.locker.Unlock()
@@ -144,7 +155,7 @@ func (st *Storage) GetSortedBidsByAssetType(
 	for _, orderItem := range bidsByType {
 		orderItems = append(orderItems, orderItem)
 	}
-	return orderItems.SortOrderItems(isDesc)
+	return orderItems.SortOrderItems(sortBy, isDesc)
 }
 
 func (st *Storage) RemoveBidsByAgentIDs(
@@ -191,6 +202,7 @@ func (st *Storage) AppendAsk(
 func (st *Storage) GetSortedAsksByAssetType(
 	assetType uint,
 	isDesc bool,
+	sortBy uint,
 ) abstraction.OrderItems {
 	st.locker.Lock()
 	defer st.locker.Unlock()
@@ -203,7 +215,7 @@ func (st *Storage) GetSortedAsksByAssetType(
 	for _, orderItem := range asksByType {
 		orderItems = append(orderItems, orderItem)
 	}
-	return orderItems.SortOrderItems(isDesc)
+	return orderItems.SortOrderItems(sortBy, isDesc)
 }
 
 func (st *Storage) GetTotalAsksByAssetType(
@@ -277,4 +289,43 @@ func (st *Storage) AppendBid(
 		return
 	}
 	bids[agentID] = orderItem
+}
+
+func (st *Storage) ComputeDecidedParam() abstraction.ActionParam {
+	st.locker.RLock()
+	defer st.locker.RUnlock()
+	var decidedParam abstraction.ActionParam
+	// TODO: statistic all action params by distribution to choose final param
+	for _, param := range st.ActionParams {
+		decidedParam = param
+		break
+	}
+	return decidedParam
+}
+
+func (st *Storage) InsertParam(
+	agentID string,
+	delta float64,
+	tax float64,
+) abstraction.ActionParam {
+	st.locker.Lock()
+	defer st.locker.Unlock()
+	actionParam := &ActionParam{
+		AgentID:      agentID,
+		Delta:        delta,
+		Tax:          tax,
+		ModifiedTime: time.Now().Unix(),
+	}
+	st.ActionParams[agentID] = actionParam
+	return actionParam
+}
+
+func (st *Storage) GetMiners() []abstraction.Agent {
+	miners := []abstraction.Agent{}
+	for _, agent := range st.Agents {
+		if agent.GetType() == common.MINER {
+			miners = append(miners, agent)
+		}
+	}
+	return miners
 }

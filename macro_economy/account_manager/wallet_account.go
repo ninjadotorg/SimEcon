@@ -2,15 +2,21 @@ package account_manager
 
 type WalletAccount struct {
 	Address string
-	Balance float64 // checking/saving acc balance
+	Coins   float64
+	Bonds   float64
 	PriIC   float64 // primary income in the last step
 	SecIC   float64 // secondary income in the last step
 }
 
-func NewWalletAccount(address string, balance float64) *WalletAccount {
+func NewWalletAccount(
+	address string,
+	coins float64,
+	bonds float64,
+) *WalletAccount {
 	return &WalletAccount{
 		Address: address,
-		Balance: balance,
+		Coins:   coins,
+		Bonds:   bonds,
 		PriIC:   0,
 		SecIC:   0,
 	}

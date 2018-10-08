@@ -57,6 +57,22 @@ func BuildSellEndPoint(agentID string) string {
 	return fmt.Sprintf("%s/agents/%s/sell", BuildHttpServerAddress(), agentID)
 }
 
+func BuildStabilizeEndPoint(agentID string) string {
+	return fmt.Sprintf("%s/agents/%s/stabilize", BuildHttpServerAddress(), agentID)
+}
+
+func BuildBuyTokensEndPoint(agentID string) string {
+	return fmt.Sprintf("%s/agents/%s/tokens/buy", BuildHttpServerAddress(), agentID)
+}
+
+func BuildGetCoinPriceEndPoint() string {
+	return fmt.Sprintf("%s/economy/coins/price", BuildHttpServerAddress())
+}
+
+func BuildGetTotalTokensEndPoint() string {
+	return fmt.Sprintf("%s/economy/tokens/totals", BuildHttpServerAddress())
+}
+
 func HandleHttpResp(
 	result interface{},
 	httpResp *http.Response,

@@ -53,6 +53,10 @@ func (p *Person) GetType() uint {
 	return p.Type
 }
 
+func (p *Person) GetAgentID() string {
+	return p.AgentID
+}
+
 func (p *Person) UpdateAgent(
 	st abstraction.Storage,
 	agentDTO abstraction.AgentDTO,

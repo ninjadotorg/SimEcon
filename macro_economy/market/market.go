@@ -31,7 +31,7 @@ func (m *Market) Buy(
 	prod abstraction.Production,
 	tr abstraction.Tracker,
 ) (float64, error) {
-	sortedBidsByAssetType := st.GetSortedBidsByAssetType(orderItemReq.AssetType, false)
+	sortedBidsByAssetType := st.GetSortedBidsByAssetType(orderItemReq.AssetType, false, common.ORDER_TIME)
 
 	removingBidAgentIDs := []string{}
 	for _, bid := range sortedBidsByAssetType {
@@ -51,6 +51,7 @@ func (m *Market) Buy(
 				bid.GetAgentID(),
 				bid.GetPricePerUnit()*orderItemReq.Quantity,
 				common.PRIIC,
+				common.COIN,
 			)
 			bid.SetQuantity(actualBidQty - orderItemReq.Quantity)
 			if bid.GetQuantity() == 0 {
@@ -66,6 +67,7 @@ func (m *Market) Buy(
 			bid.GetAgentID(),
 			bid.GetPricePerUnit()*actualBidQty,
 			common.PRIIC,
+			common.COIN,
 		)
 		orderItemReq.Quantity -= actualBidQty
 		sellerActualAsset.SetQuantity(sellerActualAsset.GetQuantity() - actualBidQty)
@@ -114,7 +116,7 @@ func (m *Market) Sell(
 	prod abstraction.Production,
 	tr abstraction.Tracker,
 ) (float64, error) {
-	sortedAsksByAssetType := st.GetSortedAsksByAssetType(orderItemReq.AssetType, false)
+	sortedAsksByAssetType := st.GetSortedAsksByAssetType(orderItemReq.AssetType, false, common.ORDER_TIME)
 
 	removingAskAgentIDs := []string{}
 	for _, ask := range sortedAsksByAssetType {
@@ -128,7 +130,7 @@ func (m *Market) Sell(
 		)
 		buyerActualAsset := prod.GetActualAsset(buyerAsset)
 
-		askBalance := am.GetBalance(ask.GetAgentID())
+		askBalance := am.GetBalance(ask.GetAgentID(), common.COIN)
 		if askBalance < ask.GetPricePerUnit()*math.Min(orderItemReq.Quantity, ask.GetQuantity()) {
 			removingAskAgentIDs = append(removingAskAgentIDs, ask.GetAgentID())
 			continue
@@ -140,6 +142,7 @@ func (m *Market) Sell(
 				agentID,
 				ask.GetPricePerUnit()*orderItemReq.Quantity,
 				common.PRIIC,
+				common.COIN,
 			)
 			ask.SetQuantity(ask.GetQuantity() - orderItemReq.Quantity)
 			if ask.GetQuantity() == 0 {
@@ -157,6 +160,7 @@ func (m *Market) Sell(
 			agentID,
 			ask.GetPricePerUnit()*ask.GetQuantity(),
 			common.PRIIC,
+			common.COIN,
 		)
 
 		buyerActualAsset.SetQuantity(buyerActualAsset.GetQuantity() + ask.GetQuantity())
@@ -196,4 +200,119 @@ func (m *Market) Sell(
 	}
 
 	return orderItemReq.Quantity, nil
+}
+
+func (m *Market) SellTokens(
+	orderItemReq *dto.OrderItem,
+	st abstraction.Storage,
+	am abstraction.AccountManager,
+	tr abstraction.Tracker,
+) (float64, error) {
+	var exchangeTokenType uint = common.COIN
+	if orderItemReq.AssetType == common.COIN {
+		exchangeTokenType = common.BOND
+	}
+	sortedAsksByTokenType := st.GetSortedAsksByAssetType(orderItemReq.AssetType, true, common.PRICE_PER_UINT)
+	removingAskAgentIDs := []string{}
+	for _, ask := range sortedAsksByTokenType {
+		if orderItemReq.Quantity <= ask.GetQuantity() {
+			amt := orderItemReq.Quantity * ask.GetPricePerUnit()
+			am.PayFrom(ask.GetAgentID(), amt, exchangeTokenType)
+			am.PayTo(ask.GetAgentID(), orderItemReq.Quantity, common.SECIC, orderItemReq.AssetType)
+			ask.SetQuantity(ask.GetQuantity() - orderItemReq.Quantity)
+			if ask.GetQuantity() == 0 {
+				removingAskAgentIDs = append(removingAskAgentIDs, ask.GetAgentID())
+			}
+			orderItemReq.Quantity = 0
+			break
+		}
+		amt := ask.GetQuantity() * ask.GetPricePerUnit()
+		am.PayFrom(ask.GetAgentID(), amt, exchangeTokenType)
+		am.PayTo(ask.GetAgentID(), ask.GetQuantity(), common.SECIC, orderItemReq.AssetType)
+		orderItemReq.Quantity -= ask.GetQuantity()
+		ask.SetQuantity(0)
+		removingAskAgentIDs = append(removingAskAgentIDs, ask.GetAgentID())
+	}
+	// re-update ask list: remove ask with qty = 0 and append new ask if remaning qty > 0
+	if len(removingAskAgentIDs) > 0 {
+		err := st.RemoveAsksByAgentIDs(removingAskAgentIDs, orderItemReq.AssetType)
+		if err != nil {
+			return -1, err
+		}
+	}
+
+	if orderItemReq.Quantity > 0 {
+		st.AppendBid(
+			orderItemReq.AssetType,
+			common.DEFAULT_AGENT_ID,
+			orderItemReq.Quantity,
+			-1,
+		)
+		fmt.Println("----Bid----")
+		fmt.Println("Asset type: ", orderItemReq.AssetType)
+		fmt.Println("Quantity: ", orderItemReq.Quantity)
+		totalBids := st.GetTotalBidsByAssetType(orderItemReq.AssetType)
+		record := []string{fmt.Sprintf("%d", time.Now().Unix()), fmt.Sprintf("%.1f", totalBids)}
+		fmt.Println("Record: ", record)
+		err := tr.WriteToCSV(fmt.Sprintf("%s_%d.csv", common.TOTAL_BIDS_FILE, orderItemReq.AssetType), record)
+		if err != nil {
+			return orderItemReq.Quantity, err
+		}
+	}
+	return orderItemReq.Quantity, nil
+}
+
+func (m *Market) BuyTokens(
+	buyerID string,
+	orderItemReq *dto.OrderItem,
+	st abstraction.Storage,
+	am abstraction.AccountManager,
+	tr abstraction.Tracker,
+) (float64, error) {
+	var exchangeTokenType uint = common.COIN
+	if orderItemReq.AssetType == common.COIN {
+		exchangeTokenType = common.BOND
+	}
+	sortedBidsByTokenType := st.GetSortedBidsByAssetType(orderItemReq.AssetType, true, common.PRICE_PER_UINT)
+
+	if len(sortedBidsByTokenType) == 0 {
+		st.AppendAsk(
+			orderItemReq.AssetType,
+			orderItemReq.AgentID,
+			orderItemReq.Quantity,
+			orderItemReq.PricePerUnit,
+		)
+		return orderItemReq.Quantity, nil
+	}
+
+	for _, bid := range sortedBidsByTokenType { // because order token in
+		bidQty := bid.GetQuantity()
+		qty := math.Min(bidQty, orderItemReq.Quantity)
+		amt := qty * orderItemReq.PricePerUnit
+		am.PayFrom(buyerID, amt, exchangeTokenType)
+		am.PayTo(buyerID, qty, common.SECIC, orderItemReq.AssetType)
+
+		if bidQty > orderItemReq.Quantity {
+			bid.SetQuantity(bidQty - orderItemReq.Quantity)
+			return 0, nil
+		}
+		// remove current bid
+		err := st.RemoveBidsByAgentIDs([]string{common.DEFAULT_AGENT_ID}, orderItemReq.AssetType)
+		if err != nil {
+			return -1, err
+		}
+		// append order item to asks
+		orderItemReq.Quantity -= bidQty
+		if orderItemReq.Quantity > 0 {
+			st.AppendAsk(
+				orderItemReq.AssetType,
+				orderItemReq.AgentID,
+				orderItemReq.Quantity,
+				orderItemReq.PricePerUnit,
+			)
+			return orderItemReq.Quantity, nil
+		}
+		return 0, nil
+	}
+	return 0, nil
 }

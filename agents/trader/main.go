@@ -15,9 +15,8 @@ import (
 )
 
 const (
-	NUMBER_OF_AGENTS     = 100
-	AGENT_TYPE           = 1
-	PERSISTENT_FILE_PATH = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/micro_economy/person/persistent.json"
+	NUMBER_OF_AGENTS     = 20
+	PERSISTENT_FILE_PATH = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/agents/trader/persistent.json"
 )
 
 func process(
@@ -30,8 +29,10 @@ func process(
 		fmt.Printf("Get wallet balance error: %s\n", err.Error())
 		return
 	}
-
-	walBal := walAcc.Balance
+	walCoins := walAcc.Coins
+	coinsForTrade := walCoins * 0.6
+	coinsForNec := walCoins - coinsForTrade
+	walBonds := walAcc.Bonds
 
 	// get assets
 	agentAssets, err := common.GetAgentAssets(httpClient, agentID)
@@ -41,7 +42,7 @@ func process(
 	}
 
 	// produce man hours from necessity
-	// eat all necessecity
+	// eat all necessity
 	nAsset, _ := agentAssets[common.NECESSITY]
 	if nAsset.Quantity > 0 {
 		producedAgentAssets, err := common.Produce(
@@ -102,9 +103,59 @@ func process(
 		}
 	}
 
+	// get coin price
+	coinPrice, err := common.GetCoinPrice(httpClient)
+	if err != nil {
+		fmt.Printf("Get coin price error: %s\n", err.Error())
+		return
+	}
+
+	if coinPrice > 1.1 && walBonds > 0 { // predict that system will sell coins, trader will buy coins from bonds
+		var askingCoinPrice float64 = 1 // TODO: figure out asking coin price here
+		qty := walBonds / askingCoinPrice
+
+		orderBuyItem := &common.OrderItem{
+			AgentID:      agentID,
+			AssetType:    common.COIN,
+			Quantity:     qty,
+			PricePerUnit: askingCoinPrice,
+		}
+		_, err = common.Order(
+			httpClient,
+			agentID,
+			orderBuyItem,
+			"buyTokens",
+		)
+		if err != nil {
+			fmt.Printf("Buy coins error: %s\n", err.Error())
+			return
+		}
+
+	} else if coinPrice < 0.9 { // predict that system will sell bonds, trader will buy bonds from coins
+		var askingBondPrice float64 = 0.75 // TODO: figure out asking bond price here
+		qty := coinsForTrade / askingBondPrice
+
+		orderBuyItem := &common.OrderItem{
+			AgentID:      agentID,
+			AssetType:    common.BOND,
+			Quantity:     qty,
+			PricePerUnit: askingBondPrice,
+		}
+		_, err = common.Order(
+			httpClient,
+			agentID,
+			orderBuyItem,
+			"buyTokens",
+		)
+		if err != nil {
+			fmt.Printf("Buy bonds error: %s\n", err.Error())
+			return
+		}
+	}
+
 	// buy necessity
 	nPricePerUnit := common.NECESSITY_PRICE_BASELINE * ((rand.Float64() * 80) + 40) / 100
-	nQty := math.Floor(walBal / nPricePerUnit)
+	nQty := math.Floor(coinsForNec / nPricePerUnit)
 	if nQty >= 1 {
 		orderBuyItem := &common.OrderItem{
 			AgentID:      agentID,
@@ -133,7 +184,7 @@ func run() {
 		httpClient,
 		common.GetEnv("PERSISTENT_FILE_PATH", PERSISTENT_FILE_PATH),
 		NUMBER_OF_AGENTS,
-		AGENT_TYPE,
+		common.PERSON,
 	)
 
 	rand_interval := rand.Intn(9) + 2

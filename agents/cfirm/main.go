@@ -15,21 +15,22 @@ import (
 )
 
 const (
-	NUMBER_OF_AGENTS     = 20
+	NUMBER_OF_AGENTS     = 5
 	AGENT_TYPE           = 3
-	PERSISTENT_FILE_PATH = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/micro_economy/cfirm/persistent.json"
+	PERSISTENT_FILE_PATH = "/Users/autonomous/projects/golang-projects/src/github.com/ninjadotorg/SimEcon/agents/cfirm/persistent.json"
 )
 
 func process(
 	httpClient *common.HttpClient,
 	agentID string,
 ) {
-	// get wallet balance
-	walBal, err := common.GetWalletBalance(httpClient, agentID)
+	// get wallet account
+	walAcc, err := common.GetWalletAccount(httpClient, agentID)
 	if err != nil {
 		fmt.Printf("Get wallet balance error: %s\n", err.Error())
 		return
 	}
+	walBal := walAcc.Coins
 
 	// get assets
 	agentAssets, err := common.GetAgentAssets(httpClient, agentID)
